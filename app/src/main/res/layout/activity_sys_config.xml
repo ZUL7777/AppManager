@@ -1,46 +1,75 @@
-<?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".sysconfig.SysConfigActivity">
 
-    <include layout="@layout/appbar" />
+    <io.github.muntashirakon.widget.AppBarLayout
+        android:id="@+id/appbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true"
+        app:liftOnScroll="true">
 
-    <LinearLayout
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress_linear"
+            style="@style/Widget.AppTheme.LinearProgressIndicator"
+            android:indeterminate="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    </io.github.muntashirakon.widget.AppBarLayout>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
-        <androidx.appcompat.widget.AppCompatSpinner
+        <io.github.muntashirakon.widget.MaterialSpinner
+            style="@style/Widget.AppTheme.MaterialSpinner.Spinner.Small"
             android:id="@+id/spinner"
             android:layout_width="wrap_content"
-            android:layout_height="35sp"
-            android:layout_gravity="center"
-            android:layout_margin="@dimen/padding_large"
-            style="@style/AppTheme.Spinner" />
+            android:layout_height="wrap_content"
+            android:minWidth="100dp"
+            android:layout_gravity="start|center_vertical"
+            android:layout_marginVertical="@dimen/padding_small"
+            android:layout_marginHorizontal="@dimen/padding_large"
+            android:nextFocusDown="@id/recycler_view"
+            tools:hint="permissions" />
 
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <io.github.muntashirakon.AppManager.types.RecyclerViewWithEmptyView
+            <io.github.muntashirakon.widget.RecyclerView
                 android:id="@+id/recycler_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scrollbars="none"
+                android:nextFocusUp="@id/spinner"
+                android:fitsSystemWindows="true"
+                android:clipToPadding="false"
+                app:fastScrollerEnabled="true"
                 tools:listitem="@layout/item_icon_title_subtitle" />
 
-            <TextView
+            <androidx.appcompat.widget.AppCompatTextView
                 android:id="@android:id/empty"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
+                android:focusable="false"
                 android:text="@string/no_content" />
 
         </FrameLayout>
-    </LinearLayout>
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -5,19 +5,24 @@ package io.github.muntashirakon.AppManager.logcat.struct;
 import android.text.TextUtils;
 import android.util.Log;
 
-import io.github.muntashirakon.AppManager.logcat.reader.ScrubberUtils;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.github.muntashirakon.AppManager.logcat.reader.ScrubberUtils;
+
 
 // Copyright 2012 Nolan Lawson
+// Copyright 2021 Muntashir Al-Islam
 public class LogLine {
     public static final int LOG_FATAL = 15;
 
     private static final int TIMESTAMP_LENGTH = 19;
 
-    private static final Pattern logPattern = Pattern.compile(
+    private static final Pattern LOG_PATTERN = Pattern.compile(
             // log level
             "(\\w)" + "/" +
                     // tag
@@ -28,20 +33,13 @@ public class LogLine {
                     // optional weird number that only occurs on ZTE blade
                     "(?:\\*\\s*\\d+)?" +
                     "\\): ");
-
-    private int logLevel;
-    private String tag;
-    private String logOutput;
-    private int processId = -1;
-    private String timestamp;
-    private boolean expanded = false;
-    private boolean highlighted = false;
+    private static final String BEGIN = "--------- beginning of ";
 
     public static boolean omitSensitiveInfo = false;
 
-    public static LogLine newLogLine(String originalLine, boolean expanded, String filterPattern) {
-
-        LogLine logLine = new LogLine();
+    @Nullable
+    public static LogLine newLogLine(@NonNull String originalLine, boolean expanded, @Nullable Pattern filterPattern) {
+        LogLine logLine = new LogLine(originalLine);
         logLine.setExpanded(expanded);
 
         int startIdx = 0;
@@ -56,7 +54,7 @@ public class LogLine {
             startIdx = TIMESTAMP_LENGTH; // cut off timestamp
         }
 
-        Matcher matcher = logPattern.matcher(originalLine);
+        Matcher matcher = LOG_PATTERN.matcher(originalLine);
 
         if (matcher.find(startIdx)) {
             char logLevelChar = matcher.group(1).charAt(0);
@@ -69,23 +67,22 @@ public class LogLine {
             }
 
             String tagText = matcher.group(2);
-            if (tagText.matches(filterPattern)) {
-                logLine.setLogLevel(convertCharToLogLevel('V'));
+            if (filterPattern != null && filterPattern.matcher(tagText).matches()) {
+                return null;
             }
 
             logLine.setTag(tagText);
             logLine.setProcessId(Integer.parseInt(matcher.group(3)));
 
             logLine.setLogOutput(logText);
-
+        } else if (originalLine.startsWith(BEGIN)) {
+            Log.d("LogLine", "Started buffer: " + originalLine.substring(BEGIN.length()));
         } else {
             Log.d("LogLine", "Line doesn't match pattern: " + originalLine);
             logLine.setLogOutput(originalLine);
             logLine.setLogLevel(-1);
         }
-
         return logLine;
-
     }
 
     public static int convertCharToLogLevel(char logLevelChar) {
@@ -128,90 +125,96 @@ public class LogLine {
         return ' ';
     }
 
+    @NonNull
+    private final String mOriginalLine;
+
+    private int mLogLevel;
+    private String mTagName;
+    private String mLogOutput;
+    private int mPid = -1;
+    private String mTimestamp;
+    private boolean mExpanded = false;
+
+    public LogLine(@NonNull String originalLine) {
+        mOriginalLine = originalLine;
+    }
+
     public String getOriginalLine() {
-
-        if (logLevel == -1) { // starter line like "begin of log etc. etc."
-            return logOutput;
-        }
-
-        StringBuilder stringBuilder = new StringBuilder();
-
-        if (timestamp != null) {
-            stringBuilder.append(timestamp).append(' ');
-        }
-
-        stringBuilder.append(convertLogLevelToChar(logLevel))
-                .append('/')
-                .append(tag)
-                .append('(')
-                .append(processId)
-                .append("): ")
-                .append(logOutput);
-
-        return stringBuilder.toString();
+        return mOriginalLine;
     }
 
     public String getProcessIdText() {
-        return Character.toString(convertLogLevelToChar(logLevel));
+        return Character.toString(convertLogLevelToChar(mLogLevel));
     }
 
     public int getLogLevel() {
-        return logLevel;
+        return mLogLevel;
     }
 
     public void setLogLevel(int logLevel) {
-        this.logLevel = logLevel;
+        mLogLevel = logLevel;
     }
 
-    public String getTag() {
-        return tag;
+    public String getTagName() {
+        return mTagName;
     }
 
     public void setTag(String tag) {
-        this.tag = tag;
+        mTagName = tag;
     }
 
     public String getLogOutput() {
-        return logOutput;
+        return mLogOutput;
     }
 
     public void setLogOutput(String logOutput) {
         if (omitSensitiveInfo) {
-            this.logOutput = ScrubberUtils.scrubLine(logOutput);
+            mLogOutput = ScrubberUtils.scrubLine(logOutput);
         } else {
-            this.logOutput = logOutput;
+            mLogOutput = logOutput;
         }
     }
 
     public int getProcessId() {
-        return processId;
+        return mPid;
     }
 
     public void setProcessId(int processId) {
-        this.processId = processId;
+        this.mPid = processId;
     }
 
     public String getTimestamp() {
-        return timestamp;
+        return mTimestamp;
     }
 
     public void setTimestamp(String timestamp) {
-        this.timestamp = timestamp;
+        this.mTimestamp = timestamp;
     }
 
     public boolean isExpanded() {
-        return expanded;
+        return mExpanded;
     }
 
     public void setExpanded(boolean expanded) {
-        this.expanded = expanded;
+        this.mExpanded = expanded;
     }
 
-    public boolean isHighlighted() {
-        return highlighted;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof LogLine)) return false;
+        LogLine logLine = (LogLine) o;
+        return mOriginalLine.equals(logLine.mOriginalLine);
     }
 
-    public void setHighlighted(boolean highlighted) {
-        this.highlighted = highlighted;
+    @Override
+    public int hashCode() {
+        return Objects.hash(mOriginalLine);
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return mOriginalLine;
     }
 }

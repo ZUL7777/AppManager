@@ -9,21 +9,21 @@ import android.os.Parcel;
 import android.os.RemoteException;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.system.StructStat;
 import android.util.Log;
 
-import java.io.File;
-import java.util.ArrayList;
-
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.io.File;
+
+import aosp.android.content.pm.ParceledListSlice;
 import io.github.muntashirakon.AppManager.IAMService;
-import io.github.muntashirakon.AppManager.IRemoteFile;
 import io.github.muntashirakon.AppManager.IRemoteProcess;
 import io.github.muntashirakon.AppManager.IRemoteShell;
 import io.github.muntashirakon.AppManager.ipc.ps.ProcessEntry;
 import io.github.muntashirakon.AppManager.ipc.ps.Ps;
-import io.github.muntashirakon.AppManager.server.common.IRootIPC;
-import io.github.muntashirakon.io.FileStatus;
+import io.github.muntashirakon.AppManager.server.common.IRootServiceManager;
+import io.github.muntashirakon.compat.os.ParcelCompat2;
 
 public class AMService extends RootService {
     static class IAMServiceImpl extends IAMService.Stub {
@@ -48,65 +48,33 @@ public class AMService extends RootService {
         }
 
         @Override
-        public IRemoteFile getFile(String file) {
-            return new RemoteFileImpl(file);
-        }
-
-        @Override
-        public ArrayList<ProcessEntry> getRunningProcesses() {
+        public ParceledListSlice<ProcessEntry> getRunningProcesses() {
             Ps ps = new Ps();
             ps.loadProcesses();
-            return ps.getProcesses();
+            return new ParceledListSlice<>(ps.getProcesses());
         }
 
         @Override
-        public void chmod(String path, int mode) throws RemoteException {
+        public int getUid() {
+            return android.os.Process.myUid();
+        }
+
+        @Override
+        public void symlink(String file, String link) throws RemoteException {
             try {
-                Os.chmod(path, mode);
+                Os.symlink(file, link);
             } catch (ErrnoException e) {
                 throw new RemoteException(e.getMessage());
             }
         }
 
         @Override
-        public void chown(String path, int uid, int gid) throws RemoteException {
-            try {
-                Os.chown(path, uid, gid);
-            } catch (ErrnoException e) {
-                throw new RemoteException(e.getMessage());
-            }
-        }
-
-        @Override
-        public FileStatus stat(String path) throws RemoteException {
-            try {
-                StructStat fstat = Os.stat(path);
-                if (fstat == null) throw new ErrnoException("FStat returned null", 1);
-                return new FileStatus(fstat);
-            } catch (ErrnoException e) {
-                throw new RemoteException(e.getMessage());
-            }
-        }
-
-        @Override
-        public FileStatus lstat(String path) throws RemoteException {
-            try {
-                StructStat lstat = Os.lstat(path);
-                if (lstat == null) throw new ErrnoException("FStat returned null", 1);
-                return new FileStatus(lstat);
-            } catch (ErrnoException e) {
-                throw new RemoteException(e.getMessage());
-            }
-        }
-
-        @Override
-        public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
-            if (code == ProxyBinder.PROXY_BINDER_TRANSACT_CODE) {
-                data.enforceInterface(IRootIPC.class.getName());
-                transactRemote(data, reply, flags);
+        public boolean onTransact(int code, @NonNull Parcel data, @Nullable Parcel reply, int flags) throws RemoteException {
+            if (code == ProxyBinder.PROXY_BINDER_TRANSACTION) {
+                data.enforceInterface(IRootServiceManager.class.getName());
+                transactRemote(data, reply);
                 return true;
             }
-            Log.d(TAG, String.format("transact: uid=%d, code=%d", Binder.getCallingUid(), code));
             return super.onTransact(code, data, reply, flags);
         }
 
@@ -115,22 +83,21 @@ public class AMService extends RootService {
          *
          * @author Rikka
          */
-        private void transactRemote(Parcel data, Parcel reply, int flags) throws RemoteException {
+        private void transactRemote(@NonNull Parcel data, @Nullable Parcel reply) throws RemoteException {
             IBinder targetBinder = data.readStrongBinder();
             int targetCode = data.readInt();
+            int targetFlags = data.readInt();
 
-            Log.d(TAG, String.format("transact: uid=%d, descriptor=%s, code=%d", Binder.getCallingUid(), targetBinder.getInterfaceDescriptor(), targetCode));
-            Parcel newData = Parcel.obtain();
+            Parcel newData = ParcelCompat2.obtain(targetBinder);
             try {
                 newData.appendFrom(data, data.dataPosition(), data.dataAvail());
-            } catch (Throwable tr) {
-                Log.e(TAG, tr.getMessage(), tr);
-                return;
-            }
-            try {
                 long id = Binder.clearCallingIdentity();
-                targetBinder.transact(targetCode, newData, reply, flags);
+                targetBinder.transact(targetCode, newData, reply, targetFlags);
                 Binder.restoreCallingIdentity(id);
+            } catch (RemoteException e) {
+                throw e;
+            } catch (Throwable th) {
+                throw (RemoteException) new RemoteException(th.getMessage()).initCause(th);
             } finally {
                 newData.recycle();
             }

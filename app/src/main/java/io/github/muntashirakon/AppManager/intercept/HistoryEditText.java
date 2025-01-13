@@ -4,19 +4,17 @@ package io.github.muntashirakon.AppManager.intercept;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
-import androidx.preference.PreferenceManager;
 import android.widget.ArrayAdapter;
 
 import androidx.annotation.NonNull;
-
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import androidx.preference.PreferenceManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import io.github.muntashirakon.AppManager.R;
-import io.github.muntashirakon.AppManager.types.NoFilterArrayAdapter;
+import io.github.muntashirakon.adapters.NoFilterArrayAdapter;
+import io.github.muntashirakon.widget.MaterialAutoCompleteTextView;
 
 public class HistoryEditText {
     private static final String DELIMITER = "';'";
@@ -46,7 +44,7 @@ public class HistoryEditText {
         protected void showHistory() {
             List<String> items = getHistoryItems();
             ArrayAdapter<String> adapter = new NoFilterArrayAdapter<>(mContext,
-                    R.layout.item_checked_text_view, items);
+                    io.github.muntashirakon.ui.R.layout.auto_complete_dropdown_item, items);
             mEditor.setAdapter(adapter);
         }
 
@@ -116,7 +114,7 @@ public class HistoryEditText {
      * define history function for these editors
      */
     public HistoryEditText(@NonNull Activity context, @NonNull MaterialAutoCompleteTextView... editors) {
-        this.mContext = context;
+        mContext = context;
         mEditorHandlers = new EditorHandler[editors.length];
 
         for (int i = 0; i < editors.length; i++) {

@@ -2,9 +2,8 @@
 
 package io.github.muntashirakon.AppManager.crypto;
 
-import android.os.RemoteException;
-
 import androidx.annotation.AnyThread;
+import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
@@ -16,12 +15,9 @@ import org.bouncycastle.crypto.modes.GCMBlockCipher;
 import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,25 +28,25 @@ import io.github.muntashirakon.AppManager.backup.CryptoUtils;
 import io.github.muntashirakon.AppManager.crypto.ks.KeyStoreManager;
 import io.github.muntashirakon.AppManager.crypto.ks.SecretKeyCompat;
 import io.github.muntashirakon.AppManager.logs.Log;
-import io.github.muntashirakon.AppManager.utils.IOUtils;
-import io.github.muntashirakon.io.ProxyFile;
-import io.github.muntashirakon.io.ProxyInputStream;
-import io.github.muntashirakon.io.ProxyOutputStream;
+import io.github.muntashirakon.io.IoUtils;
+import io.github.muntashirakon.io.Path;
 
 public class AESCrypto implements Crypto {
     public static final String TAG = "AESCrypto";
 
     public static final String AES_EXT = ".aes";
-
     public static final String AES_KEY_ALIAS = "backup_aes";
+    public static final int GCM_IV_SIZE_BYTES = 12;
+    public static final int MAC_SIZE_BITS_OLD = 32;
+    public static final int MAC_SIZE_BITS = 128;
 
-    public static final int GCM_IV_LENGTH = 12; // in bytes
-
-    private final SecretKey secretKey;
-    private final AEADParameters spec;
+    private final SecretKey mSecretKey;
+    private final byte[] mIv;
     @CryptoUtils.Mode
-    private final String parentMode;
-    private final List<File> newFiles = new ArrayList<>();
+    private final String mParentMode;
+    private final List<Path> mNewFiles = new ArrayList<>();
+
+    private int mMacSizeBits = MAC_SIZE_BITS;
 
     public AESCrypto(@NonNull byte[] iv) throws CryptoException {
         this(iv, CryptoUtils.MODE_AES, null);
@@ -58,37 +54,65 @@ public class AESCrypto implements Crypto {
 
     protected AESCrypto(@NonNull byte[] iv, @NonNull @CryptoUtils.Mode String mode, @Nullable byte[] encryptedAesKey)
             throws CryptoException {
-        this.parentMode = mode;
-        if (parentMode.equals(CryptoUtils.MODE_AES)) {
-            try {
-                KeyStoreManager keyStoreManager = KeyStoreManager.getInstance();
-                this.secretKey = keyStoreManager.getSecretKey(AES_KEY_ALIAS, null);
-                if (this.secretKey == null) {
-                    throw new CryptoException("No SecretKey with alias " + AES_KEY_ALIAS);
+        mIv = iv;
+        mParentMode = mode;
+        switch (mParentMode) {
+            case CryptoUtils.MODE_AES:
+                try {
+                    KeyStoreManager keyStoreManager = KeyStoreManager.getInstance();
+                    mSecretKey = keyStoreManager.getSecretKey(AES_KEY_ALIAS);
+                    if (mSecretKey == null) {
+                        throw new CryptoException("No SecretKey with alias " + AES_KEY_ALIAS);
+                    }
+                } catch (Exception e) {
+                    throw new CryptoException(e);
                 }
-            } catch (Exception e) {
-                throw new CryptoException(e);
-            }
-        } else if (parentMode.equals(CryptoUtils.MODE_RSA)) {
-            // Hybrid encryption using RSA
-            if (encryptedAesKey == null) {
-                // No encryption key provided, generate one
-                this.secretKey = RSACrypto.generateAesKey();
-            } else {
-                // Encryption key provided
-                this.secretKey = RSACrypto.decryptAesKey(encryptedAesKey);
-            }
-        } else {
-            throw new CryptoException("Unsupported mode " + parentMode);
+                break;
+            case CryptoUtils.MODE_RSA:
+                // Hybrid encryption using RSA
+                if (encryptedAesKey == null) {
+                    // No encryption key provided, generate one
+                    mSecretKey = RSACrypto.generateAesKey();
+                } else {
+                    // Encryption key provided
+                    mSecretKey = RSACrypto.decryptAesKey(encryptedAesKey);
+                }
+                break;
+            case CryptoUtils.MODE_ECC:
+                // Hybrid encryption using ECC
+                if (encryptedAesKey == null) {
+                    // No encryption key provided, generate one
+                    mSecretKey = ECCCrypto.generateAesKey();
+                } else {
+                    // Encryption key provided
+                    mSecretKey = ECCCrypto.decryptAesKey(encryptedAesKey);
+                }
+                break;
+            default:
+                throw new CryptoException("Unsupported mode " + mParentMode);
         }
-        this.spec = new AEADParameters(new KeyParameter(secretKey.getEncoded()), secretKey.getEncoded().length, iv);
     }
 
+    public void setMacSizeBits(int macSizeBits) {
+        if (macSizeBits == MAC_SIZE_BITS || macSizeBits == MAC_SIZE_BITS_OLD) {
+            mMacSizeBits = macSizeBits;
+        }
+    }
+
+    @NonNull
+    private AEADParameters getParams() {
+        // We need to generate it dynamically due to MAC size issues
+        return new AEADParameters(new KeyParameter(mSecretKey.getEncoded()), mMacSizeBits, mIv);
+    }
+
+    @CallSuper
     @Nullable
     protected byte[] getEncryptedAesKey() {
         try {
-            if (parentMode.equals(CryptoUtils.MODE_RSA)) {
-                return RSACrypto.encryptAesKey(secretKey);
+            if (mParentMode.equals(CryptoUtils.MODE_RSA)) {
+                return RSACrypto.encryptAesKey(mSecretKey);
+            } else if (mParentMode.equals(CryptoUtils.MODE_ECC)) {
+                return ECCCrypto.encryptAesKey(mSecretKey);
             }
         } catch (CryptoException e) {
             Log.e(TAG, e);
@@ -98,98 +122,99 @@ public class AESCrypto implements Crypto {
 
     @WorkerThread
     @Override
-    public boolean encrypt(@NonNull File[] files) {
-        return handleFiles(true, files);
+    public void encrypt(@NonNull Path[] files) throws IOException {
+        handleFiles(true, files);
     }
 
     @Override
     public void encrypt(@NonNull InputStream unencryptedStream, @NonNull OutputStream encryptedStream)
-            throws IOException, InvalidAlgorithmParameterException, InvalidKeyException {
+            throws IOException {
         // Init cipher
         GCMBlockCipher cipher = new GCMBlockCipher(new AESEngine());
-        cipher.init(true, spec);
+        cipher.init(true, getParams());
         // Convert unencrypted stream to encrypted stream
         try (OutputStream cipherOS = new CipherOutputStream(encryptedStream, cipher)) {
-            IOUtils.copy(unencryptedStream, cipherOS);
+            IoUtils.copy(unencryptedStream, cipherOS);
         }
     }
 
     @WorkerThread
     @Override
-    public boolean decrypt(@NonNull File[] files) {
-        return handleFiles(false, files);
+    public void decrypt(@NonNull Path[] files) throws IOException {
+        handleFiles(false, files);
     }
 
     @Override
     public void decrypt(@NonNull InputStream encryptedStream, @NonNull OutputStream unencryptedStream)
-            throws IOException, InvalidAlgorithmParameterException, InvalidKeyException {
+            throws IOException {
         // Init cipher
         GCMBlockCipher cipher = new GCMBlockCipher(new AESEngine());
-        cipher.init(false, spec);
+        cipher.init(false, getParams());
         // Convert encrypted stream to unencrypted stream
         try (InputStream cipherIS = new CipherInputStream(encryptedStream, cipher)) {
-            IOUtils.copy(cipherIS, unencryptedStream);
+            IoUtils.copy(cipherIS, unencryptedStream);
         }
     }
 
     @WorkerThread
-    private boolean handleFiles(boolean forEncryption, @NonNull File[] files) {
-        newFiles.clear();
-        if (files.length > 0) {  // files is never null here
-            // Init cipher
-            GCMBlockCipher cipher = new GCMBlockCipher(new AESEngine());
-            cipher.init(forEncryption, spec);
-            // Get desired extension
-            String ext = CryptoUtils.getExtension(parentMode);
-            // Encrypt/decrypt files
-            for (File file : files) {
-                File outputFilename;
-                if (!forEncryption) {
-                    outputFilename = new ProxyFile(file.getAbsolutePath().substring(0, file.getAbsolutePath().lastIndexOf(ext)));
-                } else outputFilename = new ProxyFile(file.getAbsolutePath() + ext);
-                newFiles.add(outputFilename);
-                Log.i(TAG, "Input: " + file + "\nOutput: " + outputFilename);
-                try (InputStream is = new ProxyInputStream(file);
-                     OutputStream os = new ProxyOutputStream(outputFilename)) {
-                    if (forEncryption) {
-                        try (OutputStream cipherOS = new CipherOutputStream(os, cipher)) {
-                            IOUtils.copy(is, cipherOS);
-                        }
-                    } else {  // Cipher.DECRYPT_MODE
-                        try (InputStream cipherIS = new CipherInputStream(is, cipher)) {
-                            IOUtils.copy(cipherIS, os);
-                        }
-                    }
-                } catch (IOException | RemoteException e) {
-                    Log.e(TAG, "Error: " + e.toString(), e);
-                    return false;
-                }
-                // Delete unencrypted file
+    private void handleFiles(boolean forEncryption, @NonNull Path[] files) throws IOException {
+        mNewFiles.clear();
+        // `files` is never null here
+        if (files.length == 0) {
+            Log.d(TAG, "No files to de/encrypt");
+            return;
+        }
+        // Init cipher
+        GCMBlockCipher cipher = new GCMBlockCipher(new AESEngine());
+        cipher.init(forEncryption, getParams());
+        // Get desired extension
+        String ext = CryptoUtils.getExtension(mParentMode);
+        // Encrypt/decrypt files
+        for (Path inputPath : files) {
+            Path parent = inputPath.getParent();
+            if (parent == null) {
+                throw new IOException("Parent of " + inputPath + " cannot be null.");
+            }
+            String outputFilename;
+            if (!forEncryption) {
+                outputFilename = inputPath.getName().substring(0, inputPath.getName().lastIndexOf(ext));
+            } else outputFilename = inputPath.getName() + ext;
+            Path outputPath = parent.createNewFile(outputFilename, null);
+            mNewFiles.add(outputPath);
+            Log.i(TAG, "Input: %s\nOutput: %s", inputPath, outputPath);
+            try (InputStream is = inputPath.openInputStream();
+                 OutputStream os = outputPath.openOutputStream()) {
                 if (forEncryption) {
-                    if (!file.delete()) {
-                        Log.e(TAG, "Couldn't delete old file " + file);
-                        return false;
+                    try (OutputStream cipherOS = new CipherOutputStream(os, cipher)) {
+                        IoUtils.copy(is, cipherOS);
+                    }
+                } else {  // Cipher.DECRYPT_MODE
+                    try (InputStream cipherIS = new CipherInputStream(is, cipher)) {
+                        IoUtils.copy(cipherIS, os);
                     }
                 }
             }
-            // Total success
-        } else {
-            Log.d(TAG, "No files to de/encrypt");
+            // Delete unencrypted file
+            if (forEncryption) {
+                if (!inputPath.delete()) {
+                    throw new IOException("Couldn't delete old file " + inputPath);
+                }
+            }
         }
-        return true;
+        // Total success
     }
 
     @AnyThread
     @NonNull
     @Override
-    public File[] getNewFiles() {
-        return newFiles.toArray(new File[0]);
+    public Path[] getNewFiles() {
+        return mNewFiles.toArray(new Path[0]);
     }
 
     @Override
     public void close() {
         try {
-            SecretKeyCompat.destroy(secretKey);
+            SecretKeyCompat.destroy(mSecretKey);
         } catch (DestroyFailedException e) {
             e.printStackTrace();
         }

@@ -3,13 +3,13 @@
 package io.github.muntashirakon.AppManager.utils;
 
 import android.annotation.TargetApi;
-import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Pair;
 
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringDef;
+import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 
 import java.io.File;
@@ -26,7 +26,9 @@ import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 
 import aosp.libcore.util.HexEncoding;
-import io.github.muntashirakon.io.ProxyInputStream;
+import io.github.muntashirakon.io.IoUtils;
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.Paths;
 
 public class DigestUtils {
     @StringDef({CRC32, MD2, MD5, SHA_1, SHA_224, SHA_256, SHA_384, SHA_512})
@@ -50,16 +52,23 @@ public class DigestUtils {
         return HexEncoding.encodeToString(getDigest(algo, bytes), false /* lowercase */);
     }
 
+    @VisibleForTesting
     @WorkerThread
     @NonNull
     public static String getHexDigest(@Algorithm String algo, @NonNull File path) {
-        List<File> allFiles = new ArrayList<>();
-        gatherFiles(allFiles, path);
+        return getHexDigest(algo, Paths.get(path));
+    }
+
+    @WorkerThread
+    @NonNull
+    public static String getHexDigest(@Algorithm String algo, @NonNull Path path) {
+        List<Path> allFiles = Paths.getAll(path);
         List<String> hashes = new ArrayList<>(allFiles.size());
-        for (File file : allFiles) {
-            try (InputStream fileInputStream = new ProxyInputStream(file)) {
-                hashes.add(DigestUtils.getHexDigest(algo, fileInputStream));
-            } catch (IOException | RemoteException e) {
+        for (Path file : allFiles) {
+            if (file.isDirectory()) continue;
+            try (InputStream fileInputStream = file.openInputStream()) {
+                hashes.add(getHexDigest(algo, fileInputStream));
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -79,9 +88,7 @@ public class DigestUtils {
     @NonNull
     public static byte[] getDigest(@Algorithm String algo, @NonNull byte[] bytes) {
         if (CRC32.equals(algo)) {
-            java.util.zip.CRC32 crc32 = new CRC32();
-            crc32.update(bytes);
-            return longToBytes(crc32.getValue());
+            return longToBytes(calculateCrc32(bytes));
         }
         try {
             return MessageDigest.getInstance(algo).digest(bytes);
@@ -95,20 +102,17 @@ public class DigestUtils {
     @NonNull
     public static byte[] getDigest(@Algorithm String algo, @NonNull InputStream stream) {
         if (CRC32.equals(algo)) {
-            java.util.zip.CRC32 crc32 = new CRC32();
-            byte[] buffer = new byte[IOUtils.DEFAULT_BUFFER_SIZE];
-            try (CheckedInputStream cis = new CheckedInputStream(stream, crc32)) {
-                //noinspection StatementWithEmptyBody
-                while (cis.read(buffer) >= 0) {
-                }
-            } catch (IOException ignore) {
+            try {
+                return longToBytes(calculateCrc32(stream));
+            } catch (IOException e) {
+                e.printStackTrace();
+                return new byte[0];
             }
-            return longToBytes(crc32.getValue());
         }
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(algo);
             try (DigestInputStream digestInputStream = new DigestInputStream(stream, messageDigest)) {
-                byte[] buffer = new byte[IOUtils.DEFAULT_BUFFER_SIZE];
+                byte[] buffer = new byte[IoUtils.DEFAULT_BUFFER_SIZE];
                 //noinspection StatementWithEmptyBody
                 while (digestInputStream.read(buffer) != -1) {
                 }
@@ -122,14 +126,59 @@ public class DigestUtils {
     }
 
     @WorkerThread
+    public static long calculateCrc32(Path file) throws IOException {
+        try (InputStream is = file.openInputStream()) {
+            return calculateCrc32(is);
+        }
+    }
+
+    @AnyThread
+    public static long calculateCrc32(byte[] bytes) {
+        CRC32 crc32 = new CRC32();
+        crc32.update(bytes);
+        return crc32.getValue();
+    }
+
+    @AnyThread
+    public static long calculateCrc32(InputStream stream) throws IOException {
+        CRC32 crc32 = new CRC32();
+        byte[] buffer = new byte[IoUtils.DEFAULT_BUFFER_SIZE];
+        try (CheckedInputStream cis = new CheckedInputStream(stream, crc32)) {
+            //noinspection StatementWithEmptyBody
+            while (cis.read(buffer) >= 0) {
+            }
+        }
+        return crc32.getValue();
+    }
+
+    @WorkerThread
     @NonNull
-    public static Pair<String, String>[] getDigests(File path) {
-        @Algorithm String[] algorithms = new String[]{DigestUtils.MD5, DigestUtils.SHA_1, DigestUtils.SHA_256,
-                DigestUtils.SHA_384, DigestUtils.SHA_512};
+    public static Pair<String, String>[] getDigests(@NonNull Path file) throws IOException {
+        if (!file.isFile()) {
+            throw new IOException(file + " is not a file.");
+        }
+        @Algorithm String[] algorithms = new String[]{MD5, SHA_1, SHA_256, SHA_384, SHA_512};
+        MessageDigest[] messageDigests = new MessageDigest[algorithms.length];
         @SuppressWarnings("unchecked")
         Pair<String, String>[] digests = new Pair[algorithms.length];
         for (int i = 0; i < algorithms.length; ++i) {
-            digests[i] = new Pair<>(algorithms[i], getHexDigest(algorithms[i], path));
+            try {
+                messageDigests[i] = MessageDigest.getInstance(algorithms[i]);
+            } catch (NoSuchAlgorithmException e) {
+                return ExUtils.rethrowAsIOException(e);
+            }
+        }
+        try (InputStream is = file.openInputStream()) {
+            byte[] buffer = new byte[IoUtils.DEFAULT_BUFFER_SIZE];
+            int length;
+            while ((length = is.read(buffer)) != -1) {
+                for (int i = 0; i < algorithms.length; ++i) {
+                    messageDigests[i].update(buffer, 0, length);
+                }
+            }
+        }
+        for (int i = 0; i < algorithms.length; ++i) {
+            digests[i] = new Pair<>(algorithms[i], HexEncoding.encodeToString(messageDigests[i].digest(), false));
         }
         return digests;
     }
@@ -137,8 +186,7 @@ public class DigestUtils {
     @AnyThread
     @NonNull
     public static Pair<String, String>[] getDigests(byte[] bytes) {
-        @Algorithm String[] algorithms = new String[]{DigestUtils.MD5, DigestUtils.SHA_1, DigestUtils.SHA_256,
-                DigestUtils.SHA_384, DigestUtils.SHA_512};
+        @Algorithm String[] algorithms = new String[]{MD5, SHA_1, SHA_256, SHA_384, SHA_512};
         @SuppressWarnings("unchecked")
         Pair<String, String>[] digests = new Pair[algorithms.length];
         for (int i = 0; i < algorithms.length; ++i) {
@@ -155,20 +203,5 @@ public class DigestUtils {
             l >>= 8;
         }
         return result;
-    }
-
-    static void gatherFiles(@NonNull List<File> files, @NonNull File source) {
-        if (source.isDirectory()) {
-            File[] children = source.listFiles();
-            if (children == null || children.length == 0) {
-                return;
-            }
-            for (File child : children) {
-                gatherFiles(files, child);
-            }
-        } else if (source.isFile()) {
-            // Not directory, add it
-            files.add(source);
-        } // else we don't support other type of files
     }
 }

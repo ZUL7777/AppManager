@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentSender;
+import android.content.pm.permission.SplitPermissionInfoParcelable;
 import android.graphics.Bitmap;
 import android.os.BaseBundle;
 import android.os.Binder;
@@ -31,10 +32,24 @@ public interface IPackageManager extends IInterface {
 
     boolean isPackageAvailable(String packageName, int userId) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     PackageInfo getPackageInfo(String packageName, int flags, int userId) throws RemoteException;
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    PackageInfo getPackageInfo(String packageName, long flags, int userId) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.O)
     PackageInfo getPackageInfoVersioned(VersionedPackage versionedPackage, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    PackageInfo getPackageInfoVersioned(VersionedPackage versionedPackage, long flags, int userId) throws RemoteException;
 
     /**
      * @deprecated Removed in API 24 (Android N)
@@ -42,8 +57,15 @@ public interface IPackageManager extends IInterface {
     @Deprecated
     int getPackageUid(String packageName, int userId) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.N)
     int getPackageUid(String packageName, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    int getPackageUid(String packageName, long flags, int userId) throws RemoteException;
 
     /**
      * @deprecated Removed in API 23 (Android M)
@@ -58,8 +80,15 @@ public interface IPackageManager extends IInterface {
     @RequiresApi(Build.VERSION_CODES.M)
     int[] getPackageGids(String packageName, int userId) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.N)
     int[] getPackageGids(String packageName, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    int[] getPackageGids(String packageName, long flags, int userId) throws RemoteException;
 
     String[] currentToCanonicalPackageNames(String[] names) throws RemoteException;
 
@@ -79,12 +108,10 @@ public interface IPackageManager extends IInterface {
     PermissionInfo getPermissionInfo(String name, String packageName, int flags) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<PermissionInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<PermissionInfo>}.
-     * @deprecated Removed in API 30 (Android R)
+     * @deprecated Use {@link IPackageManagerN#queryPermissionsByGroup(String, int)} instead.
      */
     @Deprecated
-    Object queryPermissionsByGroup(String group, int flags) throws RemoteException;
+    List<PermissionInfo> queryPermissionsByGroup(String group, int flags) throws RemoteException;
 
     /**
      * @deprecated Deprecated since API 30 (Android R)
@@ -93,25 +120,58 @@ public interface IPackageManager extends IInterface {
     PermissionGroupInfo getPermissionGroupInfo(String name, int flags) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<PermissionGroupInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<PermissionGroupInfo>}.
-     * @deprecated Removed in API 30 (Android R)
+     * @deprecated Use {@link IPackageManagerN#getAllPermissionGroups(int)} instead.
      */
     @Deprecated
-    Object getAllPermissionGroups(int flags) throws RemoteException;
+    List<PermissionGroupInfo> getAllPermissionGroups(int flags) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ApplicationInfo getApplicationInfo(String packageName, int flags, int userId) throws RemoteException;
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ApplicationInfo getApplicationInfo(String packageName, long flags, int userId) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ActivityInfo getActivityInfo(ComponentName className, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ActivityInfo getActivityInfo(ComponentName className, long flags, int userId) throws RemoteException;
 
     boolean activitySupportsIntent(ComponentName className, Intent intent,
                                    String resolvedType) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ActivityInfo getReceiverInfo(ComponentName className, int flags, int userId) throws RemoteException;
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ActivityInfo getReceiverInfo(ComponentName className, long flags, int userId) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ServiceInfo getServiceInfo(ComponentName className, int flags, int userId) throws RemoteException;
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ServiceInfo getServiceInfo(ComponentName className, long flags, int userId) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ProviderInfo getProviderInfo(ComponentName className, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ProviderInfo getProviderInfo(ComponentName className, long flags, int userId) throws RemoteException;
 
     /**
      * @deprecated Removed in API 23 (Android M)
@@ -119,17 +179,9 @@ public interface IPackageManager extends IInterface {
     @Deprecated
     int checkPermission(String permName, String pkgName) throws RemoteException;
 
-    /**
-     * @deprecated Deprecated since API 30 (Android R)
-     */
-    @Deprecated
     @RequiresApi(Build.VERSION_CODES.M)
     int checkPermission(String permName, String pkgName, int userId) throws RemoteException;
 
-    /**
-     * @deprecated Deprecated since API 30 (Android R)
-     */
-    @Deprecated
     int checkUidPermission(String permName, int uid) throws RemoteException;
 
     /**
@@ -260,13 +312,16 @@ public interface IPackageManager extends IInterface {
 
     boolean isUidPrivileged(int uid) throws RemoteException;
 
-    /**
-     * @deprecated Deprecated since API 30 (Android R)
-     */
-    @Deprecated
     String[] getAppOpPermissionPackages(String permissionName) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ResolveInfo resolveIntent(Intent intent, String resolvedType, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ResolveInfo resolveIntent(Intent intent, String resolvedType, long flags, int userId) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.O)
     ResolveInfo findPersistentPreferredActivity(Intent intent, int userId) throws RemoteException;
@@ -274,56 +329,93 @@ public interface IPackageManager extends IInterface {
     boolean canForwardTo(Intent intent, String resolvedType, int sourceUserId, int targetUserId) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<ResolveInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<ResolveInfo>}.
+     * @deprecated Use {@link IPackageManagerN#queryIntentActivities(Intent, String, int, int)} instead.
      */
-    Object queryIntentActivities(Intent intent, String resolvedType, int flags, int userId) throws RemoteException;
+    @Deprecated
+    List<ResolveInfo> queryIntentActivities(Intent intent, String resolvedType, int flags, int userId) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<ResolveInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<ResolveInfo>}.
+     * @deprecated Use {@link IPackageManagerN#queryIntentActivityOptions(ComponentName, Intent[], String[], Intent, String, int, int)} instead.
      */
-    Object queryIntentActivityOptions(ComponentName caller, Intent[] specifics,
-                                      String[] specificTypes, Intent intent,
-                                      String resolvedType, int flags, int userId) throws RemoteException;
+    @Deprecated
+    List<ResolveInfo> queryIntentActivityOptions(ComponentName caller, Intent[] specifics,
+                                                 String[] specificTypes, Intent intent,
+                                                 String resolvedType, int flags, int userId) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<ResolveInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<ResolveInfo>}.
+     * @deprecated Use {@link IPackageManagerN#queryIntentReceivers(Intent, String, int, int)} instead.
      */
-    Object queryIntentReceivers(Intent intent, String resolvedType, int flags, int userId) throws RemoteException;
+    @Deprecated
+    List<ResolveInfo> queryIntentReceivers(Intent intent, String resolvedType, int flags, int userId)
+            throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ResolveInfo resolveService(Intent intent, String resolvedType, int flags, int userId) throws RemoteException;
 
-    /**
-     * @return It used to return {@link List<ResolveInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<ResolveInfo>}.
-     */
-    Object queryIntentServices(Intent intent, String resolvedType, int flags, int userId) throws RemoteException;
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ResolveInfo resolveService(Intent intent, String resolvedType, long flags, int userId) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<ResolveInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<ResolveInfo>}.
+     * @deprecated Use {@link IPackageManagerN#queryIntentServices(Intent, String, int, int)} instead.
      */
-    Object queryIntentContentProviders(Intent intent, String resolvedType, int flags, int userId) throws RemoteException;
+    @Deprecated
+    List<ResolveInfo> queryIntentServices(Intent intent, String resolvedType, int flags, int userId)
+            throws RemoteException;
+
+    /**
+     * @deprecated Use {@link IPackageManagerN#queryIntentContentProviders(Intent, String, int, int)} instead.
+     */
+    @Deprecated
+    List<ResolveInfo> queryIntentContentProviders(Intent intent, String resolvedType, int flags, int userId)
+            throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.O)
     ParceledListSlice<ResolveInfo> queryContentProviders(String processName, int uid, int flags, String metaDataKey) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ParceledListSlice<PackageInfo> getInstalledPackages(int flags, int userId) throws RemoteException;
 
-    ParceledListSlice<PackageInfo> getPackagesHoldingPermissions(String[] permissions,
-                                                                 int flags, int userId) throws RemoteException;
-
-    ParceledListSlice<ApplicationInfo> getInstalledApplications(int flags, int userId) throws RemoteException;
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ParceledListSlice<PackageInfo> getInstalledPackages(long flags, int userId) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<ApplicationInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<ApplicationInfo>}.
+     * @deprecated Removed in API 33 (Android T)
      */
-    Object getPersistentApplications(int flags) throws RemoteException;
+    @Deprecated
+    ParceledListSlice<PackageInfo> getPackagesHoldingPermissions(String[] permissions, int flags, int userId) throws RemoteException;
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ParceledListSlice<PackageInfo> getPackagesHoldingPermissions(String[] permissions, long flags, int userId) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
+    ParceledListSlice<ApplicationInfo> getInstalledApplications(int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ParceledListSlice<ApplicationInfo> getInstalledApplications(long flags, int userId) throws RemoteException;
+
+    /**
+     * @deprecated Use {@link IPackageManagerN#getPersistentApplications(int)} instead.
+     */
+    @Deprecated
+    List<ApplicationInfo> getPersistentApplications(int flags) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     ProviderInfo resolveContentProvider(String name, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ProviderInfo resolveContentProvider(String name, long flags, int userId) throws RemoteException;
 
     /**
      * Retrieve sync information for all content providers.
@@ -336,18 +428,18 @@ public interface IPackageManager extends IInterface {
     void querySyncProviders(List<String> outNames, List<ProviderInfo> outInfo) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<ProviderInfo>} but from Android M (API 23), it returns
-     * {@link ParceledListSlice<ProviderInfo>}.
+     * @deprecated Use {@link IPackageManagerN#queryContentProviders(String, int, int)} instead.
      */
-    Object queryContentProviders(String processName, int uid, int flags) throws RemoteException;
+    @Deprecated
+    List<ProviderInfo> queryContentProviders(String processName, int uid, int flags) throws RemoteException;
 
     InstrumentationInfo getInstrumentationInfo(ComponentName className, int flags) throws RemoteException;
 
     /**
-     * @return It used to return {@link List<InstrumentationInfo>} but from Android N (API 24), it
-     * returns {@link ParceledListSlice<InstrumentationInfo>}.
+     * @deprecated Use {@link IPackageManagerN#queryInstrumentation(String, int)} instead.
      */
-    Object queryInstrumentation(String targetPackage, int flags) throws RemoteException;
+    @Deprecated
+    List<InstrumentationInfo> queryInstrumentation(String targetPackage, int flags) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.O)
     void setApplicationCategoryHint(String packageName, int categoryHint, String callerPackageName) throws RemoteException;
@@ -387,8 +479,15 @@ public interface IPackageManager extends IInterface {
 
     String getInstallerPackageName(String packageName) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 34 (Android U)
+     */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.R)
     InstallSourceInfo getInstallSourceInfo(String packageName) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    InstallSourceInfo getInstallSourceInfo(String packageName, int userId) throws RemoteException;
 
     /**
      * @deprecated Removed in API 23 (Android M)
@@ -445,14 +544,14 @@ public interface IPackageManager extends IInterface {
                                                      int userId) throws RemoteException;
 
     /**
-     * @deprecated Removed in API 28 (Android P)
+     * @deprecated Replaced in API 28 (Android P) by {@link #setPackagesSuspendedAsUser(String[], boolean, PersistableBundle, PersistableBundle, String, String, int)}
      */
     @Deprecated
     @RequiresApi(Build.VERSION_CODES.N)
     String[] setPackagesSuspendedAsUser(String[] packageNames, boolean suspended, int userId) throws RemoteException;
 
     /**
-     * @deprecated Removed in API 29 (Android Q)
+     * @deprecated Replaced in API 29 (Android Q) by {@link #setPackagesSuspendedAsUser(String[], boolean, PersistableBundle, PersistableBundle, SuspendDialogInfo, String, int)}
      */
     @Deprecated
     @RequiresApi(Build.VERSION_CODES.P)
@@ -460,10 +559,23 @@ public interface IPackageManager extends IInterface {
                                         PersistableBundle appExtras, PersistableBundle launcherExtras,
                                         String dialogMessage, String callingPackage, int userId) throws RemoteException;
 
+    /**
+     * @deprecated Replaced in API 34 r29 (Android U) by {@link #setPackagesSuspendedAsUser(String[], boolean, PersistableBundle, PersistableBundle, SuspendDialogInfo, int, String, int, int)}
+     */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.Q)
     String[] setPackagesSuspendedAsUser(String[] packageNames, boolean suspended,
                                         PersistableBundle appExtras, PersistableBundle launcherExtras,
                                         SuspendDialogInfo dialogInfo, String callingPackage, int userId) throws RemoteException;
+
+    /**
+     * Introduced in API 34 r29
+     */
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    String[] setPackagesSuspendedAsUser(String[] packageNames, boolean suspended,
+                                        PersistableBundle appExtras, PersistableBundle launcherExtras,
+                                        SuspendDialogInfo dialogInfo, int flags, String suspendingPackage,
+                                        int suspendingUserId, int targetUserId) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.N)
     boolean isPackageSuspendedForUser(String packageName, int userId) throws RemoteException;
@@ -547,8 +659,17 @@ public interface IPackageManager extends IInterface {
 
     /**
      * As per {@link android.content.pm.PackageManager#setComponentEnabledSetting}.
+     *
+     * @deprecated Replaced by {@link #setComponentEnabledSetting(ComponentName, int, int, int, String)} in Android 14 (SDK 34)
      */
+    @Deprecated
     void setComponentEnabledSetting(ComponentName componentName, int newState, int flags, int userId) throws RemoteException;
+
+    /**
+     * As per {@link android.content.pm.PackageManager#setComponentEnabledSetting}.
+     */
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    void setComponentEnabledSetting(ComponentName componentName, int newState, int flags, int userId, String callingPackage) throws RemoteException;
 
     /**
      * As per {@link android.content.pm.PackageManager#getComponentEnabledSetting}.
@@ -818,7 +939,10 @@ public interface IPackageManager extends IInterface {
      * Ask the package manager to perform a dex-opt for the given reason. The package
      * manager will map the reason to a compiler filter according to the current system
      * configuration.
+     *
+     * @deprecated Removed in API 27 (Android O MR1)
      */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.N)
     boolean performDexOpt(String packageName, boolean checkProfiles, int compileReason, boolean force) throws RemoteException;
 
@@ -827,10 +951,23 @@ public interface IPackageManager extends IInterface {
      * <p>
      * Note: exposed only for the shell command to allow moving packages explicitly to a
      * definite state.
+     *
+     * @deprecated Replaced by {@link #performDexOptMode(String, boolean, String, boolean, boolean, String)} in API 27 (Android O MR1)
      */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.N)
     boolean performDexOptMode(String packageName, boolean checkProfiles,
                               String targetCompilerFilter, boolean force) throws RemoteException;
+
+    /**
+     * Ask the package manager to perform a dex-opt with the given compiler filter.
+     * <p>
+     * Note: exposed only for the shell command to allow moving packages explicitly to a
+     * definite state.
+     */
+    @RequiresApi(Build.VERSION_CODES.O_MR1)
+    boolean performDexOptMode(String packageName, boolean checkProfiles,
+                              String targetCompilerFilter, boolean force, boolean bootComplete, String splitName) throws RemoteException;
 
     /**
      * Ask the package manager to perform a dex-opt with the given compiler filter on the
@@ -844,8 +981,11 @@ public interface IPackageManager extends IInterface {
 
     /**
      * Ask the package manager to compile layouts in the given package.
+     *
+     * @deprecated Removed in API 31 (Android 12)
      */
     @RequiresApi(Build.VERSION_CODES.Q)
+    @Deprecated
     boolean compileLayouts(String packageName) throws RemoteException;
 
     /**
@@ -854,6 +994,10 @@ public interface IPackageManager extends IInterface {
     @RequiresApi(Build.VERSION_CODES.N)
     void dumpProfiles(String packageName) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 34 (Android 14)
+     */
+    @Deprecated
     void forceDexOpt(String packageName) throws RemoteException;
 
     /**
@@ -878,12 +1022,6 @@ public interface IPackageManager extends IInterface {
 
     PackageCleanItem nextPackageToClean(PackageCleanItem lastPackage) throws RemoteException;
 
-    /**
-     * @deprecated Removed in API 23 (Android M)
-     */
-    @Deprecated
-    void movePackage(String packageName, IPackageMoveObserver observer, int flags) throws RemoteException;
-
     @RequiresApi(Build.VERSION_CODES.M)
     int getMoveStatus(int moveId) throws RemoteException;
 
@@ -892,6 +1030,12 @@ public interface IPackageManager extends IInterface {
 
     @RequiresApi(Build.VERSION_CODES.M)
     void unregisterMoveCallback(IPackageMoveObserver callback) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 23 (Android M)
+     */
+    @Deprecated
+    void movePackage(String packageName, IPackageMoveObserver observer, int flags) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.M)
     int movePackage(String packageName, String volumeUuid) throws RemoteException;
@@ -947,11 +1091,11 @@ public interface IPackageManager extends IInterface {
     Object getIntentFilterVerifications(String packageName) throws RemoteException;
 
     /**
-     * @return In Android M (API 23), it returned {@link List<IntentFilter>} but from Android N, it
-     * returns {@link ParceledListSlice<IntentFilter>}.
+     * @deprecated Use {@link IPackageManagerN#getAllIntentFilters(String)} instead.
      */
     @RequiresApi(Build.VERSION_CODES.M)
-    Object getAllIntentFilters(String packageName) throws RemoteException;
+    @Deprecated
+    List<IntentFilter> getAllIntentFilters(String packageName) throws RemoteException;
 
     /**
      * @deprecated Removed in API 30 (Android R)
@@ -1170,11 +1314,25 @@ public interface IPackageManager extends IInterface {
     @RequiresApi(Build.VERSION_CODES.O)
     int getInstallReason(String packageName, int userId) throws RemoteException;
 
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.O)
     ParceledListSlice getSharedLibraries(String packageName, int flags, int userId) throws RemoteException;
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ParceledListSlice getSharedLibraries(String packageName, long flags, int userId) throws RemoteException;
+
+    /**
+     * @deprecated Removed in API 33 (Android T)
+     */
+    @Deprecated
     @RequiresApi(Build.VERSION_CODES.Q)
     ParceledListSlice getDeclaredSharedLibraries(String packageName, int flags, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    ParceledListSlice getDeclaredSharedLibraries(String packageName, long flags, int userId) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.O)
     boolean canRequestPackageInstalls(String packageName, int userId) throws RemoteException;
@@ -1256,6 +1414,9 @@ public interface IPackageManager extends IInterface {
 
     @RequiresApi(Build.VERSION_CODES.Q)
     void notifyPackagesReplacedReceived(String[] packages) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    List<SplitPermissionInfoParcelable> getSplitPermissions();
 
     abstract class Stub extends Binder implements IPackageManager {
         public static IPackageManager asInterface(IBinder binder) {

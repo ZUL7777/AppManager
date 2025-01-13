@@ -1,7 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -10,42 +8,24 @@
 
     <include layout="@layout/appbar" />
 
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipe_refresh"
+    <io.github.muntashirakon.widget.RecyclerView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
+        android:focusable="false"
+        android:scrollbars="none"
+        android:fitsSystemWindows="true"
+        android:clipToPadding="false"
+        app:fastScrollerEnabled="true"
+        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior"
+        tools:listitem="@layout/item_running_app" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/list_item"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scrollbars="none"
-            tools:listitem="@layout/item_running_app" />
-
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
-
-    <com.google.android.material.bottomappbar.BottomAppBar
-        android:id="@+id/bottom_appbar"
+    <io.github.muntashirakon.widget.MultiSelectionView
+        android:id="@+id/selection_view"
         android:layout_width="match_parent"
-        android:layout_height="?actionBarSize"
-        android:layout_gravity="bottom"
-        android:theme="@style/AppTheme.BottomAppBar"
-        android:visibility="gone"
-        app:menu="@menu/activity_running_apps_selection_actions"
-        app:navigationIcon="@drawable/ic_baseline_clear_24">
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/bottom_appbar_counter"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:textSize="20sp"
-            android:textColor="?android:attr/textColorPrimary"
-            android:ellipsize="marquee"
-            tools:text="@tools:sample/lorem[4]"
-            android:singleLine="true" />
-
-    </com.google.android.material.bottomappbar.BottomAppBar>
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true"
+        android:focusable="false"
+        app:menu="@menu/activity_running_apps_popup_actions" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

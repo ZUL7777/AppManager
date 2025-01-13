@@ -15,8 +15,16 @@ import androidx.annotation.RequiresApi;
 import java.util.List;
 
 public interface IPackageInstaller extends IInterface {
+    /**
+     * @deprecated Removed in Android 12 (API 31)
+     */
+    @Deprecated
     int createSession(PackageInstaller.SessionParams params, String installerPackageName,
                       int userId) throws RemoteException;
+
+    @RequiresApi(31)
+    int createSession(PackageInstaller.SessionParams params, String installerPackageName,
+                      String installerAttributionTag, int userId);
 
     void updateSessionAppIcon(int sessionId, Bitmap appIcon) throws RemoteException;
 
@@ -43,15 +51,26 @@ public interface IPackageInstaller extends IInterface {
     void unregisterCallback(IPackageInstallerCallback callback) throws RemoteException;
 
     /**
+     * @deprecated Removed in Android M.
+     */
+    @Deprecated
+    void uninstall(String packageName, int flags, IntentSender statusReceiver, int userId) throws RemoteException;
+
+    /**
      * @deprecated Removed in Android O.
      */
     @Deprecated
+    @RequiresApi(Build.VERSION_CODES.M)
     void uninstall(String packageName, String callerPackageName, int flags,
                    IntentSender statusReceiver, int userId) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.O)
     void uninstall(VersionedPackage versionedPackage, String callerPackageName, int flags,
                    IntentSender statusReceiver, int userId) throws RemoteException;
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    void uninstallExistingPackage(VersionedPackage versionedPackage, String callerPackageName,
+                                  IntentSender statusReceiver, int userId);
 
     @RequiresApi(Build.VERSION_CODES.Q)
     void installExistingPackage(String packageName, int installFlags, int installReason,

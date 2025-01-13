@@ -2,60 +2,44 @@
 
 package io.github.muntashirakon.AppManager.logcat.struct;
 
-import java.io.File;
+import androidx.annotation.Nullable;
+
+import io.github.muntashirakon.io.Path;
 
 // Copyright 2012 Nolan Lawson
+// Copyright 2021 Muntashir Al-Islam
 public class SendLogDetails {
-    private String subject;
-    private String body;
-    private File attachment;
-    private SendLogDetails.AttachmentType attachmentType;
+    @Nullable
+    private String mSubject;
+    @Nullable
+    private Path mAttachment;
+    @Nullable
+    private String mAttachmentType;
 
+    @Nullable
     public String getSubject() {
-        return subject;
+        return mSubject;
     }
 
-    public void setSubject(String subject) {
-        this.subject = subject;
+    public void setSubject(@Nullable String subject) {
+        mSubject = subject;
     }
 
-    public String getBody() {
-        return body;
+    @Nullable
+    public Path getAttachment() {
+        return mAttachment;
     }
 
-    public void setBody(String body) {
-        this.body = body;
+    public void setAttachment(@Nullable Path attachment) {
+        mAttachment = attachment;
     }
 
-    public File getAttachment() {
-        return attachment;
+    @Nullable
+    public String getAttachmentType() {
+        return mAttachmentType;
     }
 
-    public void setAttachment(File attachment) {
-        this.attachment = attachment;
-    }
-
-    public SendLogDetails.AttachmentType getAttachmentType() {
-        return attachmentType;
-    }
-
-    public void setAttachmentType(SendLogDetails.AttachmentType attachmentType) {
-        this.attachmentType = attachmentType;
-    }
-
-    public enum AttachmentType {
-        None("text/plain"),
-        Zip("application/zip"),
-        Text("application/*");
-
-        private final String mimeType;
-
-        AttachmentType(String mimeType) {
-            this.mimeType = mimeType;
-        }
-
-        public String getMimeType() {
-            return this.mimeType;
-        }
+    public void setAttachmentType(@Nullable String attachmentType) {
+        mAttachmentType = attachmentType;
     }
 }

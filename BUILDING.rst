@@ -7,11 +7,11 @@ Building App Manager
 Requirements
 ============
 
-* **Hardware:** Any computer with 4GB RAM (8GB recommended)
+* **Hardware:** Any computer with 8 GB RAM and 20 GB storage
 * **Operating system:** Linux/macOS (no support for Windows)
-* **Software:** Android Studio, Gradle
+* **Software:** Android Studio/IntelliJ IDEA, Gradle, Latex, pandoc, JDK 17+
 * **Active network connection:** Depending on your development environment,
-  this may cross 10 Gigabytes of data.
+  you may need at least 20 GB data package.
 
 macOS
 =====
@@ -78,14 +78,18 @@ Clone and Build App Manager
 Create Bundled App
 ==================
 
-In order to create a bundled app in APKS format, build Android App Bundle (AAB)
-first.  Then run the following command::
+To create a bundled app in APKS format, run the following command::
 
-./scripts/aab_to_apks.sh preRelease
+  ./scripts/aab_to_apks.sh type
 
-Replace ``prePelease`` with ``release`` or ``debug`` based on your
-requirements.  It will ask for KeyStore credentials interactively.
+Replace ``type`` with ``release`` or ``debug`` based on your requirements.
+It will ask for KeyStore credentials interactively.
 
 The script above will also generate a universal APK.
 
 .. _bundletool-all.jar: https://github.com/google/bundletool
+
+
+Build documentation
+===================
+See  `docs/raw/en/README.md <docs/raw/en/README.md>`_

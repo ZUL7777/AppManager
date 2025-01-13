@@ -2,27 +2,37 @@
 
 package io.github.muntashirakon.io;
 
+import static org.junit.Assert.assertEquals;
+
 import androidx.annotation.NonNull;
-import io.github.muntashirakon.AppManager.utils.DigestUtils;
-import io.github.muntashirakon.AppManager.utils.IOUtils;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import io.github.muntashirakon.AppManager.utils.DigestUtils;
 
+@RunWith(RobolectricTestRunner.class)
 public class SplitOutputStreamTest {
     private SplitOutputStream splitOutputStream;
     private InputStream inputStream;
+    private final List<File> junkFiles = new ArrayList<>();
     private final ClassLoader classLoader = getClass().getClassLoader();
 
     @Before
     public void setUp() throws Exception {
-        splitOutputStream = new SplitOutputStream("/tmp/AppManager_v2.5.22.apks", 1024*1024);
+        Path tmpPath = Paths.get("/tmp");
+        splitOutputStream = new SplitOutputStream(tmpPath, "AppManager_v2.5.22.apks", 1024000);
         assert classLoader != null;
         File sampleFile = new File(classLoader.getResource("AppManager_v2.5.22.apks").getFile());
         inputStream = new FileInputStream(sampleFile);
@@ -32,11 +42,14 @@ public class SplitOutputStreamTest {
     public void tearDown() throws Exception {
         splitOutputStream.close();
         inputStream.close();
+        for (File file : junkFiles) {
+            file.delete();
+        }
     }
 
     @Test
     public void write() throws IOException {
-        IOUtils.copy(inputStream, splitOutputStream);
+        IoUtils.copy(inputStream, splitOutputStream);
         List<String> expectedHashes = getExpectedHashes();
         List<String> actualHashes = getActualHashes();
         assertEquals(expectedHashes, actualHashes);
@@ -78,6 +91,7 @@ public class SplitOutputStreamTest {
                 throw new FileNotFoundException(file + " does not exist.");
             }
             actualHashes.add(DigestUtils.getHexDigest(DigestUtils.SHA_256, file));
+            junkFiles.add(file);
         }
         return actualHashes;
     }

@@ -2,10 +2,13 @@
 
 package org.apache.commons.compress.archivers.tar;
 
-import android.os.RemoteException;
+import static org.junit.Assert.assertEquals;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.junit.After;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -16,24 +19,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.muntashirakon.AppManager.utils.DigestUtils;
-import io.github.muntashirakon.AppManager.utils.IOUtils;
-import io.github.muntashirakon.io.ProxyOutputStream;
+import io.github.muntashirakon.io.IoUtils;
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.Paths;
 import io.github.muntashirakon.io.SplitInputStream;
 
-import static org.junit.Assert.assertEquals;
-
+@RunWith(RobolectricTestRunner.class)
 public class TarArchiveInputStreamTest {
     private final ClassLoader classLoader = getClass().getClassLoader();
+    private final List<File> junkFiles = new ArrayList<>();
+
+    @After
+    public void tearDown() {
+        for (File file : junkFiles) {
+            file.delete();
+        }
+    }
 
     @Test
-    public void TestUnTar() throws IOException, RemoteException {
-        List<File> fileList = new ArrayList<>();
+    public void TestUnTar() throws IOException {
+        List<Path> pathList = new ArrayList<>();
         assert classLoader != null;
-        fileList.add(new File(classLoader.getResource("AppManager_v2.5.22.apks.tar.0").getFile()));
-        fileList.add(new File(classLoader.getResource("AppManager_v2.5.22.apks.tar.1").getFile()));
+        pathList.add(Paths.get(classLoader.getResource("AppManager_v2.5.22.apks.tar.0").getFile()));
+        pathList.add(Paths.get(classLoader.getResource("AppManager_v2.5.22.apks.tar.1").getFile()));
 
         // Always run tests using SplitInputStream
-        try (SplitInputStream sis = new SplitInputStream(fileList);
+        try (SplitInputStream sis = new SplitInputStream(pathList);
              BufferedInputStream bis = new BufferedInputStream(sis);
              TarArchiveInputStream tis = new TarArchiveInputStream(bis)) {
             ArchiveEntry entry;
@@ -41,15 +52,15 @@ public class TarArchiveInputStreamTest {
                 // create a new path, remember check zip slip attack
                 File file = new File("/tmp", entry.getName());
                 // copy TarArchiveInputStream to newPath
-                try (OutputStream os = new ProxyOutputStream(file)) {
-                    IOUtils.copy(tis, os);
+                try (OutputStream os = Paths.get(file).openOutputStream()) {
+                    IoUtils.copy(tis, os);
                 }
             }
         }
 
         // Check integrity
         List<String> expectedHashes = new ArrayList<>();
-        fileList.clear();
+        List<File> fileList = new ArrayList<>();
         fileList.add(new File(classLoader.getResource("AppManager_v2.5.22.apks.0").getFile()));
         fileList.add(new File(classLoader.getResource("AppManager_v2.5.22.apks.1").getFile()));
         for (File file : fileList) {
@@ -64,6 +75,7 @@ public class TarArchiveInputStreamTest {
                 throw new FileNotFoundException(file + " does not exist.");
             }
             actualHashes.add(DigestUtils.getHexDigest(DigestUtils.SHA_256, file));
+            junkFiles.add(file);
         }
         assertEquals(expectedHashes, actualHashes);
     }
