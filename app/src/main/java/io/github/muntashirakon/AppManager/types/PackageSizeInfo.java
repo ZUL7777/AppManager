@@ -2,12 +2,17 @@
 
 package io.github.muntashirakon.AppManager.types;
 
+import android.annotation.UserIdInt;
 import android.app.usage.StorageStats;
-import android.content.pm.PackageStats;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.annotation.WorkerThread;
+
+import io.github.muntashirakon.AppManager.misc.OsEnvironment;
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.Paths;
 
 public class PackageSizeInfo {
     public final String packageName;
@@ -18,7 +23,7 @@ public class PackageSizeInfo {
     public final long obbSize;
 
     @SuppressWarnings("deprecation")
-    public PackageSizeInfo(@NonNull PackageStats packageStats) {
+    public PackageSizeInfo(@NonNull android.content.pm.PackageStats packageStats) {
         packageName = packageStats.packageName;
         codeSize = packageStats.codeSize + packageStats.externalCodeSize;
         dataSize = packageStats.dataSize + packageStats.externalDataSize;
@@ -27,18 +32,41 @@ public class PackageSizeInfo {
         mediaSize = packageStats.externalMediaSize;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public PackageSizeInfo(@NonNull String packageName, @NonNull StorageStats storageStats) {
+    @RequiresApi(Build.VERSION_CODES.O)
+    @WorkerThread
+    public PackageSizeInfo(@NonNull String packageName, @NonNull StorageStats storageStats, @UserIdInt int userHandle) {
         this.packageName = packageName;
         cacheSize = storageStats.getCacheBytes();
         codeSize = storageStats.getAppBytes();
         dataSize = storageStats.getDataBytes() - cacheSize;
-        // TODO(24/1/21): List obb and media size
-        mediaSize = 0L;
-        obbSize = 0L;
+        OsEnvironment.UserEnvironment ue = OsEnvironment.getUserEnvironment(userHandle);
+        mediaSize = getMediaSizeInternal(ue);
+        obbSize = getObbSizeInternal(ue);
     }
 
     public long getTotalSize() {
         return codeSize + dataSize + cacheSize + mediaSize + obbSize;
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private long getMediaSizeInternal(@NonNull OsEnvironment.UserEnvironment ue) {
+        Path[] files = ue.buildExternalStorageAppMediaDirs(packageName);
+        long size = 0L;
+        for (Path file : files) {
+            if (file.exists()) size += Paths.size(file);
+        }
+        return size;
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private long getObbSizeInternal(@NonNull OsEnvironment.UserEnvironment ue) {
+        Path[] files = ue.buildExternalStorageAppObbDirs(packageName);
+        long size = 0L;
+        for (Path file : files) {
+            if (file.exists()) {
+                size += Paths.size(file);
+            }
+        }
+        return size;
     }
 }

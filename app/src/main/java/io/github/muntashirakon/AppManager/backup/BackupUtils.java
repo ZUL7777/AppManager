@@ -2,74 +2,181 @@
 
 package io.github.muntashirakon.AppManager.backup;
 
+import static io.github.muntashirakon.AppManager.backup.BackupManager.DATA_PREFIX;
+import static io.github.muntashirakon.AppManager.backup.BackupManager.KEYSTORE_PREFIX;
+import static io.github.muntashirakon.AppManager.backup.BackupManager.SOURCE_PREFIX;
+
+import android.annotation.SuppressLint;
+import android.annotation.UserIdInt;
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.os.Build;
+import android.os.UserHandleHidden;
 import android.text.TextUtils;
-import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
+import io.github.muntashirakon.AppManager.db.entity.Backup;
+import io.github.muntashirakon.AppManager.db.utils.AppDb;
 import io.github.muntashirakon.AppManager.logcat.helper.SaveLogHelper;
-import io.github.muntashirakon.io.FileStatus;
-import io.github.muntashirakon.io.ProxyFile;
-import io.github.muntashirakon.io.ProxyFiles;
+import io.github.muntashirakon.AppManager.logs.Log;
+import io.github.muntashirakon.AppManager.misc.OsEnvironment;
+import io.github.muntashirakon.AppManager.users.Users;
+import io.github.muntashirakon.AppManager.utils.BroadcastUtils;
+import io.github.muntashirakon.AppManager.utils.Utils;
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.Paths;
 
 public final class BackupUtils {
-    @WorkerThread
-    @Nullable
-    public static MetadataManager.Metadata getBackupInfo(String packageName) {
-        MetadataManager.Metadata[] metadata = MetadataManager.getMetadata(packageName);
-        if (metadata.length == 0) return null;
-        int maxIndex = 0;
-        long maxTime = 0;
-        for (int i = 0; i < metadata.length; ++i) {
-            if (metadata[i].backupTime > maxTime) {
-                maxIndex = i;
-                maxTime = metadata[i].backupTime;
+    public static final String TAG = BackupUtils.class.getSimpleName();
+
+    private static final Pattern UUID_PATTERN = Pattern.compile("[a-f\\d]{8}(-[a-f\\d]{4}){3}-[a-f\\d]{12}");
+
+    public static boolean isUuid(@NonNull String name) {
+        return UUID_PATTERN.matcher(name).matches();
+    }
+
+    @NonNull
+    private static List<Path> getBackupPaths() {
+        Path baseDirectory = BackupFiles.getBaseDirectory();
+        List<Path> backupPaths;
+        Path[] paths = baseDirectory.listFiles(Path::isDirectory);
+        backupPaths = new ArrayList<>(paths.length);
+        for (Path path : paths) {
+            if (isUuid(path.getName())) {
+                // UUID-based backups only store one backup per folder
+                backupPaths.add(path);
             }
+            if (SaveLogHelper.SAVED_LOGS_DIR.equals(path.getName())) {
+                continue;
+            }
+            if (BackupFiles.APK_SAVING_DIRECTORY.equals(path.getName())) {
+                continue;
+            }
+            if (BackupFiles.TEMPORARY_DIRECTORY.equals(path.getName())) {
+                continue;
+            }
+            // Other backups can store multiple backups per folder
+            backupPaths.addAll(Arrays.asList(path.listFiles(Path::isDirectory)));
         }
-        return metadata[maxIndex];
+        // We don't need to check further at this stage.
+        // It's the caller's job to check the contents if needed.
+        return backupPaths;
     }
 
     @NonNull
-    private static List<String> getBackupPackages() {
-        File backupPath = BackupFiles.getBackupDirectory();
-        List<String> packages;
-        String[] files = backupPath.list((dir, name) -> new ProxyFile(dir, name).isDirectory());
-        if (files != null) packages = new ArrayList<>(Arrays.asList(files));
-        else return new ArrayList<>();
-        packages.remove(SaveLogHelper.SAVED_LOGS_DIR);
-        packages.remove(BackupFiles.APK_SAVING_DIRECTORY);
-        packages.remove(BackupFiles.TEMPORARY_DIRECTORY);
-        // We don't need to check the contents of the packages at this stage.
-        // It's the caller's job to check contents if needed.
-        return packages;
+    public static Path[] getSourceFiles(@NonNull Path backupPath, @NonNull String ext) {
+        Path[] paths = backupPath.listFiles((dir, name) -> name.startsWith(SOURCE_PREFIX) && name.endsWith(ext));
+        return Paths.getSortedPaths(paths);
+    }
+
+    @NonNull
+    public static Path[] getKeyStoreFiles(@NonNull Path backupPath, @NonNull String ext) {
+        Path[] paths = backupPath.listFiles((dir, name) -> name.startsWith(KEYSTORE_PREFIX) && name.endsWith(ext));
+        return Paths.getSortedPaths(paths);
+    }
+
+    @NonNull
+    public static Path[] getDataFiles(@NonNull Path backupPath, int index, @NonNull String ext) {
+        final String dataPrefix = DATA_PREFIX + index;
+        Path[] paths = backupPath.listFiles((dir, name) -> name.startsWith(dataPrefix) && name.endsWith(ext));
+        return Paths.getSortedPaths(paths);
     }
 
     @WorkerThread
     @NonNull
-    public static HashMap<String, MetadataManager.Metadata> getAllBackupMetadata() {
-        HashMap<String, MetadataManager.Metadata> backupMetadata = new HashMap<>();
-        List<String> backupPackages = getBackupPackages();
-        for (String dirtyPackageName : backupPackages) {
-            MetadataManager.Metadata metadata = getBackupInfo(dirtyPackageName);
-            if (metadata == null) continue;
-            MetadataManager.Metadata metadata1 = backupMetadata.get(metadata.packageName);
-            if (metadata1 == null) {
-                backupMetadata.put(metadata.packageName, metadata);
-            } else if (metadata.backupTime > metadata1.backupTime) {
-                backupMetadata.put(metadata.packageName, metadata);
-            } else {
-                backupMetadata.put(metadata1.packageName, metadata1);
+    public static HashMap<String, Backup> storeAllAndGetLatestBackupMetadata() {
+        AppDb appDb = new AppDb();
+        HashMap<String, Backup> backupMetadata = new HashMap<>();
+        HashMap<String, List<MetadataManager.Metadata>> allBackupMetadata = getAllMetadata();
+        List<Backup> backups = new ArrayList<>();
+        for (List<MetadataManager.Metadata> metadataList : allBackupMetadata.values()) {
+            if (metadataList.isEmpty()) continue;
+            Backup latestBackup = null;
+            Backup backup;
+            for (MetadataManager.Metadata metadata : metadataList) {
+                backup = Backup.fromBackupMetadata(metadata);
+                backups.add(backup);
+                if (latestBackup == null || backup.backupTime > latestBackup.backupTime) {
+                    latestBackup = backup;
+                }
+            }
+            backupMetadata.put(latestBackup.packageName, latestBackup);
+        }
+        appDb.deleteAllBackups();
+        appDb.insertBackups(backups);
+        return backupMetadata;
+    }
+
+    @WorkerThread
+    @NonNull
+    public static HashMap<String, Backup> getAllLatestBackupMetadataFromDb() {
+        HashMap<String, Backup> backupMetadata = new HashMap<>();
+        for (Backup backup : new AppDb().getAllBackups()) {
+            Backup latestBackup = backupMetadata.get(backup.packageName);
+            if (latestBackup == null || backup.backupTime > latestBackup.backupTime) {
+                backupMetadata.put(backup.packageName, backup);
             }
         }
         return backupMetadata;
+    }
+
+    public static void putBackupToDbAndBroadcast(@NonNull Context context, @NonNull MetadataManager.Metadata metadata) {
+        if (Utils.isRoboUnitTest()) {
+            return;
+        }
+        AppDb appDb = new AppDb();
+        appDb.insert(Backup.fromBackupMetadata(metadata));
+        appDb.updateApplication(context, metadata.packageName);
+        BroadcastUtils.sendDbPackageAltered(context, new String[]{metadata.packageName});
+    }
+
+    public static void deleteBackupToDbAndBroadcast(@NonNull Context context, @NonNull MetadataManager.Metadata metadata) {
+        AppDb appDb = new AppDb();
+        appDb.deleteBackup(Backup.fromBackupMetadata(metadata));
+        appDb.updateApplication(context, metadata.packageName);
+        BroadcastUtils.sendDbPackageAltered(context, new String[]{metadata.packageName});
+    }
+
+    @WorkerThread
+    @NonNull
+    public static List<Backup> getBackupMetadataFromDbNoLockValidate(@NonNull String packageName) {
+        List<Backup> backups = new AppDb().getAllBackupsNoLock(packageName);
+        List<Backup> validatedBackups = new ArrayList<>(backups.size());
+        for (Backup backup : backups) {
+            try {
+                if (backup.getBackupPath().exists()) {
+                    validatedBackups.add(backup);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return validatedBackups;
+    }
+
+    @WorkerThread
+    @Nullable
+    public static Backup getLatestBackupMetadataFromDbNoLockValidate(@NonNull String packageName) {
+        List<Backup> backups = getBackupMetadataFromDbNoLockValidate(packageName);
+        Backup latestBackup = null;
+        for (Backup backup : backups) {
+            if (latestBackup == null || backup.backupTime > latestBackup.backupTime) {
+                latestBackup = backup;
+            }
+        }
+        return latestBackup;
     }
 
     /**
@@ -79,29 +186,20 @@ public final class BackupUtils {
     @NonNull
     public static HashMap<String, List<MetadataManager.Metadata>> getAllMetadata() {
         HashMap<String, List<MetadataManager.Metadata>> backupMetadata = new HashMap<>();
-        List<String> backupPackages = getBackupPackages();
-        for (String dirtyPackageName : backupPackages) {
-            MetadataManager.Metadata[] metadataList = MetadataManager.getMetadata(dirtyPackageName);
-            for (MetadataManager.Metadata metadata : metadataList) {
-                if (backupMetadata.get(metadata.packageName) == null) {
+        List<Path> backupPaths = getBackupPaths();
+        for (Path backupPath : backupPaths) {
+            try {
+                MetadataManager.Metadata metadata = MetadataManager.getMetadata(backupPath);
+                if (!backupMetadata.containsKey(metadata.packageName)) {
                     backupMetadata.put(metadata.packageName, new ArrayList<>());
                 }
                 //noinspection ConstantConditions
                 backupMetadata.get(metadata.packageName).add(metadata);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
         return backupMetadata;
-    }
-
-    @NonNull
-    static Pair<Integer, Integer> getUidAndGid(String filepath, int uid) {
-        try {
-            FileStatus status = ProxyFiles.stat(new ProxyFile(filepath));
-            return new Pair<>(status.st_uid, status.st_gid);
-        } catch (Exception e) {
-            // Fallback to kernel user ID
-            return new Pair<>(uid, uid);
-        }
     }
 
     @Nullable
@@ -141,8 +239,9 @@ public final class BackupUtils {
     }
 
     @NonNull
-    static String[] getExcludeDirs(boolean includeCache, @Nullable String[] others) {
-        List<String> excludeDirs = new ArrayList<>();
+    static String[] getExcludeDirs(boolean includeCache, @Nullable String ...others) {
+        // Lib dirs has to be ignored by default
+        List<String> excludeDirs = new ArrayList<>(Arrays.asList(BackupManager.LIB_DIR));
         if (includeCache) {
             excludeDirs.addAll(Arrays.asList(BackupManager.CACHE_DIRS));
         }
@@ -150,5 +249,114 @@ public final class BackupUtils {
             excludeDirs.addAll(Arrays.asList(others));
         }
         return excludeDirs.toArray(new String[0]);
+    }
+
+    @SuppressLint("SdCardPath")
+    @NonNull
+    static String[] getDataDirectories(@NonNull ApplicationInfo applicationInfo, boolean loadInternal,
+                                       boolean loadExternal, boolean loadMediaObb) {
+        // Data directories *must* be readable and non-empty
+        ArrayList<String> dataDirs = new ArrayList<>();
+        if (applicationInfo.dataDir == null) {
+            throw new IllegalArgumentException("Data directory cannot be empty.");
+        }
+        int userId = UserHandleHidden.getUserId(applicationInfo.uid);
+        if (loadInternal) {
+            String dataDir = applicationInfo.dataDir;
+            if (dataDir.startsWith("/data/data/")) {
+                dataDir = Utils.replaceOnce(dataDir, "/data/data/", String.format(Locale.ROOT, "/data/user/%d/", userId));
+            }
+            dataDirs.add(dataDir);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && applicationInfo.deviceProtectedDataDir != null) {
+                // /data/user_de/{userId}
+                dataDirs.add(applicationInfo.deviceProtectedDataDir);
+            }
+        }
+        // External directories could be /sdcard, /storage/sdcard, /storage/emulated/{userId}
+        OsEnvironment.UserEnvironment ue = OsEnvironment.getUserEnvironment(userId);
+        if (loadExternal) {
+            Path[] externalFiles = ue.buildExternalStorageAppDataDirs(applicationInfo.packageName);
+            for (Path externalFile : externalFiles) {
+                // Replace /storage/emulated/{!myUserId} with /data/media/{!myUserId}
+                externalFile = Paths.getAccessiblePath(externalFile);
+                if (externalFile.listFiles().length > 0) {
+                    dataDirs.add(externalFile.getFilePath());
+                }
+            }
+        }
+        if (loadMediaObb) {
+            List<Path> externalFiles = new ArrayList<>();
+            externalFiles.addAll(Arrays.asList(ue.buildExternalStorageAppMediaDirs(applicationInfo.packageName)));
+            externalFiles.addAll(Arrays.asList(ue.buildExternalStorageAppObbDirs(applicationInfo.packageName)));
+            for (Path externalFile : externalFiles) {
+                // Replace /storage/emulated/{!myUserId} with /data/media/{!myUserId}
+                externalFile = Paths.getAccessiblePath(externalFile);
+                if (externalFile.listFiles().length > 0) {
+                    dataDirs.add(externalFile.getFilePath());
+                }
+            }
+        }
+        return dataDirs.toArray(new String[0]);
+    }
+
+    /**
+     * Get a writable data directory from the given directory. This is useful for restoring a backup.
+     */
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    @SuppressLint("SdCardPath")
+    static String getWritableDataDirectory(@NonNull String dataDir, @UserIdInt int oldUserId, @UserIdInt int newUserId) {
+        if (dataDir.startsWith("/data/data/")) {
+            // /data/data/ -> /data/user/{newUserId}/
+            return Utils.replaceOnce(dataDir, "/data/data/", String.format(Locale.ROOT, "/data/user/%d/", newUserId));
+        }
+        String dataUserDir = String.format(Locale.ROOT, "/data/user/%d/", oldUserId);
+        if (dataDir.startsWith(dataUserDir)) {
+            // /data/user/{oldUserId} -> /data/user/{newUserId}/
+            return Utils.replaceOnce(dataDir, dataUserDir, String.format(Locale.ROOT, "/data/user/%d/", newUserId));
+        }
+        String dataUserDeDir = String.format(Locale.ROOT, "/data/user_de/%d/", oldUserId);
+        if (dataDir.startsWith(dataUserDeDir)) {
+            // /data/user_de/{oldUserId} -> /data/user_de/{newUserId}/
+            return Utils.replaceOnce(dataDir, dataUserDeDir, String.format(Locale.ROOT, "/data/user_de/%d/", newUserId));
+        }
+        if (dataDir.startsWith("/sdcard/")) {
+            // /sdcard/ -> /storage/emulated/{newUserId}/ or /data/media/{newUserId}/ in a multiuser system
+            return getExternalStorage(dataDir, "/sdcard/", newUserId);
+        }
+        if (dataDir.startsWith("/storage/sdcard/")) {
+            // /storage/sdcard/ -> /storage/emulated/{newUserId}/ or /data/media/{newUserId}/ in a multiuser system, otherwise /sdcard/
+            return getExternalStorage(dataDir, "/storage/sdcard/", newUserId);
+        }
+        if (dataDir.startsWith("/storage/sdcard0/")) {
+            // /storage/sdcard0/ -> /storage/emulated/{newUserId}/ or /data/media/{newUserId}/ in a multiuser system, otherwise /sdcard/
+            return getExternalStorage(dataDir, "/storage/sdcard0/", newUserId);
+        }
+        String oldStorageEmulatedDir = String.format(Locale.ROOT, "/storage/emulated/%d/", oldUserId);
+        if (dataDir.startsWith(oldStorageEmulatedDir)) {
+            // /storage/emulated/{oldUserId}/ -> /storage/emulated/{newUserId}/ or /data/media/{newUserId}/ in a multiuser system, otherwise /sdcard/
+            return getExternalStorage(dataDir, oldStorageEmulatedDir, newUserId);
+        }
+        String oldDataMediaDir = String.format(Locale.ROOT, "/data/media/%d/", oldUserId);
+        if (dataDir.startsWith(oldDataMediaDir)) {
+            // /data/media/{oldUserId}/ -> /storage/emulated/{newUserId}/ or /data/media/{newUserId}/ in a multiuser system, otherwise /sdcard/
+            return getExternalStorage(dataDir, oldDataMediaDir, newUserId);
+        }
+        Log.i(TAG, "getWritableDataDirectory: Unrecognized path %s, using as is.", dataDir);
+        return dataDir;
+    }
+
+    @SuppressLint("SdCardPath")
+    @NonNull
+    private static String getExternalStorage(@NonNull String dataDir, @NonNull String match, @UserIdInt int userId) {
+        if (Users.getAllUsers().size() > 1) {
+            // Multiuser system, use either /storage/emulated/{userId} or /data/media/{userId}
+            String storageEmulatedDir = String.format(Locale.ROOT, "/storage/emulated/%d/", userId);
+            if (userId == UserHandleHidden.myUserId() && Paths.get(storageEmulatedDir).canRead()) {
+                return Utils.replaceOnce(dataDir, match, storageEmulatedDir);
+            }
+            return Utils.replaceOnce(dataDir, match, String.format(Locale.ROOT, "/data/media/%d/", userId));
+        }
+        // Otherwise, use /sdcard
+        return Utils.replaceOnce(dataDir, match, "/sdcard/");
     }
 }

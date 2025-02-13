@@ -11,36 +11,62 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.google.android.material.progressindicator.LinearProgressIndicator;
-import com.google.android.material.textview.MaterialTextView;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.google.android.material.progressindicator.LinearProgressIndicator;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 import io.github.muntashirakon.AppManager.R;
-import io.github.muntashirakon.AppManager.types.IconLoaderThread;
-import io.github.muntashirakon.AppManager.types.RecyclerViewWithEmptyView;
+import io.github.muntashirakon.AppManager.self.imagecache.ImageLoader;
 import io.github.muntashirakon.AppManager.utils.UIUtils;
-import me.zhanghai.android.fastscroll.FastScrollerBuilder;
+import io.github.muntashirakon.util.AdapterUtils;
+import io.github.muntashirakon.widget.RecyclerView;
+import io.github.muntashirakon.widget.SwipeRefreshLayout;
 
 public class AppsFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener {
-    AppsProfileActivity activity;
-    SwipeRefreshLayout swipeRefresh;
-    LinearProgressIndicator progressIndicator;
-    ProfileViewModel model;
-    MaterialTextView alertText;
+    public static class AppsFragmentItem {
+        @NonNull
+        public final String packageName;
+        @Nullable
+        public CharSequence label;
+        public ApplicationInfo applicationInfo;
+
+        public AppsFragmentItem(@NonNull String packageName) {
+            this.packageName = packageName;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o instanceof String) {
+                return Objects.equals(packageName, o);
+            }
+            if (!(o instanceof AppsFragmentItem)) return false;
+            AppsFragmentItem that = (AppsFragmentItem) o;
+            return Objects.equals(packageName, that.packageName);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(packageName);
+        }
+    }
+
+    private AppsProfileActivity mActivity;
+    private SwipeRefreshLayout mSwipeRefresh;
+    private LinearProgressIndicator mProgressIndicator;
+    private ProfileViewModel mModel;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        activity = (AppsProfileActivity) requireActivity();
+        mActivity = (AppsProfileActivity) requireActivity();
     }
 
     @Nullable
@@ -53,29 +79,23 @@ public class AppsFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         // Swipe refresh
-        swipeRefresh = view.findViewById(R.id.swipe_refresh);
-        swipeRefresh.setColorSchemeColors(UIUtils.getAccentColor(activity));
-        swipeRefresh.setProgressBackgroundColorSchemeColor(UIUtils.getPrimaryColor(activity));
-        swipeRefresh.setOnRefreshListener(this);
-        RecyclerViewWithEmptyView recyclerView = view.findViewById(R.id.recycler_view);
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false));
-        new FastScrollerBuilder(recyclerView).useMd2Style().build();
+        mSwipeRefresh = view.findViewById(R.id.swipe_refresh);
+        mSwipeRefresh.setOnRefreshListener(this);
+        RecyclerView recyclerView = view.findViewById(R.id.scrollView);
+        recyclerView.setLayoutManager(UIUtils.getGridLayoutAt450Dp(mActivity));
         final TextView emptyView = view.findViewById(android.R.id.empty);
         emptyView.setText(R.string.no_apps);
         recyclerView.setEmptyView(emptyView);
-        progressIndicator = view.findViewById(R.id.progress_linear);
-        progressIndicator.setVisibilityAfterHide(View.GONE);
-        progressIndicator.show();
-        alertText = view.findViewById(R.id.alert_text);
-        alertText.setVisibility(View.GONE);
-        alertText.setText(R.string.changes_not_saved);
-        swipeRefresh.setOnChildScrollUpCallback((parent, child) -> recyclerView.canScrollVertically(-1));
-        model = activity.model;
+        mProgressIndicator = view.findViewById(R.id.progress_linear);
+        mProgressIndicator.setVisibilityAfterHide(View.GONE);
+        mProgressIndicator.show();
+        view.findViewById(R.id.alert_text).setVisibility(View.GONE);
+        mSwipeRefresh.setOnChildScrollUpCallback((parent, child) -> recyclerView.canScrollVertically(-1));
+        mModel = mActivity.model;
         AppsRecyclerAdapter adapter = new AppsRecyclerAdapter();
         recyclerView.setAdapter(adapter);
-        model.getPackages().observe(getViewLifecycleOwner(), packages -> {
-            progressIndicator.hide();
+        mModel.getPackages().observe(getViewLifecycleOwner(), packages -> {
+            mProgressIndicator.hide();
             adapter.setList(packages);
         });
     }
@@ -83,67 +103,60 @@ public class AppsFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     @Override
     public void onResume() {
         super.onResume();
-        if (activity.getSupportActionBar() != null) {
-            activity.getSupportActionBar().setSubtitle(R.string.apps);
+        if (mActivity.getSupportActionBar() != null) {
+            mActivity.getSupportActionBar().setSubtitle(R.string.apps);
         }
-        activity.fab.show();
+        mActivity.fab.show();
     }
 
     @Override
     public void onRefresh() {
-        swipeRefresh.setRefreshing(false);
-        new Thread(() -> model.loadPackages()).start();
+        mSwipeRefresh.setRefreshing(false);
+        mModel.loadPackages();
     }
 
     public class AppsRecyclerAdapter extends RecyclerView.Adapter<AppsRecyclerAdapter.ViewHolder> {
         PackageManager pm;
-        final ArrayList<String> packages = new ArrayList<>();
+        final ArrayList<AppsFragmentItem> packages = new ArrayList<>();
 
         private AppsRecyclerAdapter() {
-            pm = activity.getPackageManager();
+            pm = mActivity.getPackageManager();
         }
 
-        void setList(List<String> list) {
-            packages.clear();
-            packages.addAll(list);
-            notifyDataSetChanged();
+        void setList(List<AppsFragmentItem> list) {
+            AdapterUtils.notifyDataSetChanged(this, packages, list);
         }
 
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_icon_title_subtitle, parent, false);
+            View view = LayoutInflater.from(parent.getContext()).inflate(io.github.muntashirakon.ui.R.layout.m3_preference, parent, false);
             return new ViewHolder(view);
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            if (holder.iconLoader != null) holder.iconLoader.interrupt();
-            String packageName = packages.get(position);
-            ApplicationInfo info = null;
-            try {
-                info = pm.getApplicationInfo(packageName, 0);
-            } catch (PackageManager.NameNotFoundException ignore) {
-            }
-            holder.iconLoader = new IconLoaderThread(holder.icon, info);
-            holder.iconLoader.start();
-            String label;
-            if (info != null) {
-                label = info.loadLabel(pm).toString();
-            } else label = packageName;
-            holder.title.setText(label);
-            if (packageName.equals(label)) {
-                holder.subtitle.setVisibility(View.GONE);
-            } else {
+            AppsFragmentItem fragmentItem = packages.get(position);
+            holder.icon.setTag(fragmentItem);
+            ImageLoader.getInstance().displayImage(fragmentItem.packageName, fragmentItem.applicationInfo, holder.icon);
+            CharSequence label = fragmentItem.label;
+            holder.title.setText(label != null ? label : fragmentItem.packageName);
+            if (label != null) {
                 holder.subtitle.setVisibility(View.VISIBLE);
-                holder.subtitle.setText(packageName);
+                holder.subtitle.setText(fragmentItem.packageName);
+            } else {
+                holder.subtitle.setVisibility(View.GONE);
             }
+            holder.itemView.setOnClickListener(v -> {
+            });
             holder.itemView.setOnLongClickListener(v -> {
-                PopupMenu popupMenu = new PopupMenu(activity, holder.itemView);
-                popupMenu.getMenu().add(R.string.delete).setOnMenuItemClickListener(item -> {
-                    model.deletePackage(packageName);
-                    return true;
-                });
+                PopupMenu popupMenu = new PopupMenu(mActivity, holder.itemView);
+                popupMenu.setForceShowIcon(true);
+                popupMenu.getMenu().add(R.string.delete).setIcon(R.drawable.ic_trash_can)
+                        .setOnMenuItemClickListener(item -> {
+                            mModel.deletePackage(fragmentItem.packageName);
+                            return true;
+                        });
                 popupMenu.show();
                 return true;
             });
@@ -154,19 +167,16 @@ public class AppsFragment extends Fragment implements SwipeRefreshLayout.OnRefre
             return packages.size();
         }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
+        public class ViewHolder extends RecyclerView.ViewHolder {
             ImageView icon;
             TextView title;
             TextView subtitle;
-            IconLoaderThread iconLoader;
 
             public ViewHolder(@NonNull View itemView) {
                 super(itemView);
-                icon = itemView.findViewById(R.id.item_icon);
-                title = itemView.findViewById(R.id.item_title);
-                subtitle = itemView.findViewById(R.id.item_subtitle);
-                // Hide action button
-                itemView.findViewById(R.id.item_open).setVisibility(View.GONE);
+                icon = itemView.findViewById(android.R.id.icon);
+                title = itemView.findViewById(android.R.id.title);
+                subtitle = itemView.findViewById(android.R.id.summary);
             }
         }
     }

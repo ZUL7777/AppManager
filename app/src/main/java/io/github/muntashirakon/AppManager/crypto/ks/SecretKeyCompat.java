@@ -2,6 +2,8 @@
 
 package io.github.muntashirakon.AppManager.crypto.ks;
 
+import android.annotation.SuppressLint;
+
 import androidx.annotation.NonNull;
 
 import java.lang.reflect.Field;
@@ -12,7 +14,8 @@ import javax.security.auth.DestroyFailedException;
 
 import io.github.muntashirakon.AppManager.utils.Utils;
 
-public class SecretKeyCompat {
+@SuppressLint("SoonBlockedPrivateApi")
+public final class SecretKeyCompat {
     static final Field KEY;
 
     static {

@@ -3,26 +3,35 @@
 package io.github.muntashirakon.AppManager.utils;
 
 import android.content.Context;
-import android.os.Build;
+import android.net.Uri;
 import android.os.Environment;
-import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
+import android.os.storage.StorageVolumeHidden;
 import android.text.TextUtils;
 import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 import androidx.collection.ArrayMap;
 import androidx.core.content.ContextCompat;
-import io.github.muntashirakon.AppManager.R;
-import io.github.muntashirakon.io.ProxyFile;
-import io.github.muntashirakon.io.ProxyFileReader;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import dev.rikka.tools.refine.Refine;
+import io.github.muntashirakon.AppManager.R;
+import io.github.muntashirakon.AppManager.compat.StorageManagerCompat;
+import io.github.muntashirakon.AppManager.users.Users;
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.PathReader;
+import io.github.muntashirakon.io.Paths;
 
 public class StorageUtils {
     public static final String TAG = "StorageUtils";
@@ -31,44 +40,59 @@ public class StorageUtils {
 
     @WorkerThread
     @NonNull
-    public static ArrayMap<String, ProxyFile> getAllStorageLocations(@NonNull Context context, boolean includeInternal) {
-        ArrayMap<String, ProxyFile> storageLocations = new ArrayMap<>(10);
-        if (includeInternal) {
-            ProxyFile internal = new ProxyFile(Environment.getDataDirectory());
-            addStorage(context.getString(R.string.internal_storage), internal, storageLocations);
-        }
-        @SuppressWarnings("deprecation")
-        ProxyFile sdCard = new ProxyFile(Environment.getExternalStorageDirectory());
+    public static ArrayMap<String, Uri> getAllStorageLocations(@NonNull Context context) {
+        ArrayMap<String, Uri> storageLocations = new ArrayMap<>(10);
+        Path sdCard = Paths.get(Environment.getExternalStorageDirectory());
         addStorage(context.getString(R.string.external_storage), sdCard, storageLocations);
         getStorageEnv(context, storageLocations);
         retrieveStorageManager(context, storageLocations);
         retrieveStorageFilesystem(storageLocations);
         getStorageExternalFilesDir(context, storageLocations);
+        // Get SAF persisted directories
+        ArrayMap<Uri, Long> grantedUrisAndDate = SAFUtils.getUrisWithDate(context);
+        for (int i = 0; i < grantedUrisAndDate.size(); ++i) {
+            Uri uri = grantedUrisAndDate.keyAt(i);
+            long time = grantedUrisAndDate.valueAt(i);
+            if (Paths.get(uri).isDirectory()) {
+                // Only directories are locations
+                String readableName = Paths.getLastPathSegment(uri.getPath()) + " " + DateUtils.formatDate(context, time);
+                storageLocations.put(readableName, getFixedTreeUri(uri));
+            }
+        }
         return storageLocations;
     }
 
     /**
      * unified test function to add storage if fitting
      */
-    private static void addStorage(String label, ProxyFile entry, Map<String, ProxyFile> storageLocations) {
-        if (entry != null && entry.listFiles() != null && !storageLocations.containsValue(entry)) {
-            storageLocations.put(label, entry);
-        } else if (entry != null) {
-            Log.d(TAG, entry.getAbsolutePath());
+    private static void addStorage(@NonNull String label, @Nullable Path entry, @NonNull Map<String, Uri> storageLocations) {
+        if (entry == null) {
+            return;
+        }
+        if (entry.isSymbolicLink()) {
+            // Use the real path
+            Path finalEntry = entry;
+            entry = ExUtils.requireNonNullElse(finalEntry::getRealPath, finalEntry);
+        }
+        Uri uri = entry.getUri();
+        if (!storageLocations.containsValue(uri)) {
+            storageLocations.put(label, uri);
+        } else {
+            Log.d(TAG, entry.getUri().toString());
         }
     }
 
     /**
      * Get storage from ENV, as recommended by 99%, doesn't detect external SD card, only internal ?!
      */
-    private static void getStorageEnv(@NonNull Context context, Map<String, ProxyFile> storageLocations) {
+    private static void getStorageEnv(@NonNull Context context, Map<String, Uri> storageLocations) {
         final String rawSecondaryStorage = System.getenv(ENV_SECONDARY_STORAGE);
         if (!TextUtils.isEmpty(rawSecondaryStorage)) {
             //noinspection ConstantConditions
             String[] externalCards = rawSecondaryStorage.split(":");
             for (int i = 0; i < externalCards.length; i++) {
                 String path = externalCards[i];
-                storageLocations.put(context.getString(R.string.sd_card) + (i == 0 ? "" : " " + i), new ProxyFile(path));
+                addStorage(context.getString(R.string.sd_card) + (i == 0 ? "" : " " + i), Paths.get(path), storageLocations);
             }
         }
     }
@@ -76,16 +100,16 @@ public class StorageUtils {
     /**
      * Get storage indirect, best solution so far
      */
-    private static void getStorageExternalFilesDir(Context context, Map<String, ProxyFile> storageLocations) {
-        //Get primary & secondary external device storage (internal storage & micro SDCARD slot...)
+    private static void getStorageExternalFilesDir(Context context, Map<String, Uri> storageLocations) {
+        // Get primary & secondary external device storage (internal storage & micro SDCARD slot...)
         File[] listExternalDirs = ContextCompat.getExternalFilesDirs(context, null);
         for (File listExternalDir : listExternalDirs) {
             if (listExternalDir != null) {
                 String path = listExternalDir.getAbsolutePath();
                 int indexMountRoot = path.indexOf("/Android/data/");
-                if (indexMountRoot >= 0 && indexMountRoot <= path.length()) {
-                    //Get the root path for the external directory
-                    ProxyFile file = new ProxyFile(path.substring(0, indexMountRoot));
+                if (indexMountRoot >= 0) {
+                    // Get the root path for the external directory
+                    Path file = Paths.get(path.substring(0, indexMountRoot));
                     addStorage(file.getName(), file, storageLocations);
                 }
             }
@@ -93,58 +117,81 @@ public class StorageUtils {
     }
 
     /**
-     * Get storages via StorageManager & reflection hacks, probably never works
+     * Get storages via StorageManager
      */
-    private static void retrieveStorageManager(Context context, Map<String, ProxyFile> storageLocations) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            StorageManager storage = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
+    private static void retrieveStorageManager(Context context, Map<String, Uri> storageLocations) {
+        Set<StorageVolume> storageVolumes = new HashSet<>();
+        int[] users = Users.getUsersIds();
+        for (int user : users) {
             try {
-                for (StorageVolume volume : storage.getStorageVolumes()) {
-                    // reflection attack to get volumes
-                    File dir = callReflectionFunction(volume, "getPathFile");
-                    if (dir == null) continue;
-                    String label = callReflectionFunction(volume, "getUserLabel");
-                    addStorage(label, new ProxyFile(dir), storageLocations);
-                }
-                Log.d(TAG, "used storagemanager");
-            } catch (Exception e) {
-                Log.w(TAG, "error during storage retrieval", e);
+                storageVolumes.addAll(Arrays.asList(StorageManagerCompat.getVolumeList(context, user, 0)));
+            } catch (SecurityException ignore) {
             }
+        }
+        try {
+            for (@NonNull StorageVolume volume : storageVolumes) {
+                StorageVolumeHidden vol = Refine.unsafeCast(volume);
+                File dir = vol.getPathFile();
+                if (dir == null) continue;
+                String label = vol.getUserLabel();
+                addStorage(label == null ? dir.getName() : label, Paths.get(dir), storageLocations);
+            }
+            Log.d(TAG, "used storagemanager");
+        } catch (Exception e) {
+            Log.w(TAG, "error during storage retrieval", e);
         }
     }
 
     /**
      * Get storage via /proc/mounts, probably never works
      */
-    private static void retrieveStorageFilesystem(Map<String, ProxyFile> storageLocations) {
-        try {
-            ProxyFile mountFile = new ProxyFile("/proc/mounts");
-            if (mountFile.exists()) {
-                BufferedReader reader = new BufferedReader(new ProxyFileReader(mountFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.startsWith("/dev/block/vold/")) {
-                        String[] lineElements = line.split(" ");
-                        ProxyFile element = new ProxyFile(lineElements[1]);
-                        // Don't add the default mount path since it's already in the list.
-                        addStorage(element.getName(), element, storageLocations);
-                    }
+    private static void retrieveStorageFilesystem(Map<String, Uri> storageLocations) {
+        Path mountFile = Paths.get("/proc/mounts");
+        if (!mountFile.isDirectory()) {
+            return;
+        }
+        try (BufferedReader reader = new BufferedReader(new PathReader(mountFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("/dev/block/vold/")) {
+                    String[] lineElements = line.split(" ");
+                    Path element = Paths.get(lineElements[1]);
+                    // Don't add the default mount path since it's already in the list.
+                    addStorage(element.getName(), element, storageLocations);
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException ignore) {
         }
     }
 
-    /**
-     * Reflection helper function, to invoke private functions
-     */
-    @Nullable
-    private static <T> T callReflectionFunction(@NonNull Object obj, @NonNull String function) throws ClassCastException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        Method method = obj.getClass().getDeclaredMethod(function);
-        method.setAccessible(true);
-        Object r = method.invoke(obj);
-        //noinspection unchecked
-        return (T) r;
+    @NonNull
+    private static Uri getFixedTreeUri(@NonNull Uri uri) {
+        List<String> paths = uri.getPathSegments();
+        int size = paths.size();
+        if (size < 2 || !"tree".equals(paths.get(0))) {
+            throw new IllegalArgumentException("Not a tree URI.");
+        }
+        // FORMAT: /tree/<id>/document/<id>%2F<others>
+        switch (size) {
+            case 2:
+                return uri.buildUpon()
+                        .appendPath("document")
+                        .appendPath(paths.get(1))
+                        .build();
+            case 3:
+                if (!"document".equals(paths.get(2))) {
+                    throw new IllegalArgumentException("Not a document URI.");
+                }
+                return uri.buildUpon()
+                        .appendPath(paths.get(1))
+                        .build();
+            case 4:
+                if (!"document".equals(paths.get(2))) {
+                    throw new IllegalArgumentException("Not a document URI.");
+                }
+                return uri;
+            default:
+                throw new IllegalArgumentException("Malformed URI.");
+        }
     }
 }

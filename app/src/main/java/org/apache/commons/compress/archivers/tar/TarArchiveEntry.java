@@ -6,6 +6,7 @@ import android.os.RemoteException;
 import android.system.ErrnoException;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.EntryStreamOffsets;
@@ -19,11 +20,12 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
-import io.github.muntashirakon.io.FileStatus;
-import io.github.muntashirakon.io.ProxyFiles;
+import io.github.muntashirakon.io.ExtendedFile;
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.Paths;
+import io.github.muntashirakon.io.UidGidPair;
 
 /**
  * This class represents an entry in a Tar archive. It consists
@@ -263,7 +265,14 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
     /**
      * The entry's file reference
      */
+    @Nullable
     private final File file;
+
+    /**
+     * The entry's file reference
+     */
+    @Nullable
+    private final Path path;
 
     /**
      * Extra, user supplied pax headers
@@ -304,6 +313,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
 
         this.userName = user;
         this.file = null;
+        this.path = null;
         this.preserveAbsolutePath = preserveAbsolutePath;
     }
 
@@ -417,10 +427,28 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
      * @param fileName the name to be used for the entry.
      */
     public TarArchiveEntry(final File file, final String fileName) {
+        this(Paths.get(file), fileName);
+    }
+
+    /**
+     * Construct an entry for a file. File is set to file, and the
+     * header is constructed from information from the file.
+     *
+     * <p>The entry's name will be the value of the {@code fileName}
+     * argument with all file separators replaced by forward slashes
+     * and leading slashes as well as Windows drive letters stripped.
+     * The name will end in a slash if the {@code file} represents a
+     * directory.</p>
+     *
+     * @param file     The file that the entry represents.
+     * @param fileName the name to be used for the entry.
+     */
+    public TarArchiveEntry(@NonNull final Path file, final String fileName) {
         final String normalizedName = normalizeFileName(fileName, false);
-        this.file = file;
+        this.path = file;
+        this.file = null;
         try {
-            readFileMode(this.file, normalizedName);
+            readFileMode(file, normalizedName);
         } catch (final IOException | ErrnoException | RemoteException e) {
             if (!file.isDirectory()) {
                 this.size = file.length();
@@ -431,7 +459,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
         preserveAbsolutePath = false;
     }
 
-    private void readFileMode(@NonNull final File file, final String normalizedName)
+    private void readFileMode(@NonNull final Path file, final String normalizedName)
             throws IOException, ErrnoException, RemoteException {
         if (file.isDirectory()) {
             this.linkFlag = LF_DIR;
@@ -447,17 +475,14 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
             this.size = file.length();
         }
         // Setup file attributes
-        try {
-            FileStatus fstat = ProxyFiles.stat(file);
-            this.mode = fstat.st_mode;
-            this.userId = fstat.st_uid;
-            this.groupId = fstat.st_gid;
-            setModTime(fstat.st_mtime);
-        } catch (RuntimeException e) {
-            if (e.getMessage() == null || !e.getMessage().contains("mocked")) {
-                throw e;
-            }
+        ExtendedFile f = file.getFile();
+        if (f != null) {
+            this.mode = f.getMode();
+            UidGidPair p = f.getUidGid();
+            this.userId = p.uid;
+            this.groupId = p.gid;
         }
+        this.modTime = file.lastModified() / MILLIS_PER_SECOND;
     }
 
     /**
@@ -807,8 +832,22 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
      *
      * @return this entry's file or null if the entry was not created from a file.
      */
+    @Nullable
     public File getFile() {
         return file;
+    }
+
+    /**
+     * Get this entry's path.
+     *
+     * <p>This method is only useful for entries created from a {@link
+     * File} or {@link Path} but not for entries read from an archive.</p>
+     *
+     * @return this entry's file or null if the entry was not created from a file.
+     */
+    @Nullable
+    public Path getPath() {
+        return path;
     }
 
     /**
@@ -1035,6 +1074,10 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
             return file.isDirectory();
         }
 
+        if (path != null) {
+            return path.isDirectory();
+        }
+
         if (linkFlag == LF_DIR) {
             return true;
         }
@@ -1051,6 +1094,9 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
     public boolean isFile() {
         if (file != null) {
             return file.isFile();
+        }
+        if (path != null) {
+            return path.isFile();
         }
         if (linkFlag == LF_OLDNORM || linkFlag == LF_NORMAL) {
             return true;
@@ -1304,18 +1350,27 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
      * @return An array of TarEntry's for this entry's children.
      */
     public TarArchiveEntry[] getDirectoryEntries() {
-        if (file == null || !isDirectory()) {
+        if ((file == null && path == null) || !isDirectory()) {
             return EMPTY_TAR_ARCHIVE_ENTRY_ARRAY;
         }
-        File[] dirStream = file.listFiles();
-        if (dirStream == null) {
-            return EMPTY_TAR_ARCHIVE_ENTRY_ARRAY;
+        if (file != null) {
+            File[] dirStream = file.listFiles();
+            if (dirStream == null) {
+                return EMPTY_TAR_ARCHIVE_ENTRY_ARRAY;
+            }
+            final List<TarArchiveEntry> entries = new ArrayList<>();
+            for (File f : dirStream) {
+                entries.add(new TarArchiveEntry(f));
+            }
+            return entries.toArray(EMPTY_TAR_ARCHIVE_ENTRY_ARRAY);
+        } else {  // path != null
+            Path[] dirStream = path.listFiles();
+            final List<TarArchiveEntry> entries = new ArrayList<>();
+            for (Path f : dirStream) {
+                entries.add(new TarArchiveEntry(f, this.name + File.separatorChar + f.getName()));
+            }
+            return entries.toArray(EMPTY_TAR_ARCHIVE_ENTRY_ARRAY);
         }
-        final List<TarArchiveEntry> entries = new ArrayList<>();
-        for (File f : dirStream) {
-            entries.add(new TarArchiveEntry(f));
-        }
-        return entries.toArray(EMPTY_TAR_ARCHIVE_ENTRY_ARRAY);
     }
 
     /**
@@ -1551,36 +1606,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants, EntryStreamO
      * Strips Windows' drive letter as well as any leading slashes,
      * turns path separators into forward slahes.
      */
-    private static String normalizeFileName(String fileName,
-                                            final boolean preserveAbsolutePath) {
-        if (!preserveAbsolutePath) {
-            final String osname = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
-
-            if (osname != null) {
-
-                // Strip off drive letters!
-                // REVIEW Would a better check be "(File.separator == '\')"?
-
-                if (osname.startsWith("windows")) {
-                    if (fileName.length() > 2) {
-                        final char ch1 = fileName.charAt(0);
-                        final char ch2 = fileName.charAt(1);
-
-                        if (ch2 == ':'
-                                && (ch1 >= 'a' && ch1 <= 'z'
-                                || ch1 >= 'A' && ch1 <= 'Z')) {
-                            fileName = fileName.substring(2);
-                        }
-                    }
-                } else if (osname.contains("netware")) {
-                    final int colon = fileName.indexOf(':');
-                    if (colon != -1) {
-                        fileName = fileName.substring(colon + 1);
-                    }
-                }
-            }
-        }
-
+    private static String normalizeFileName(String fileName, final boolean preserveAbsolutePath) {
         fileName = fileName.replace(File.separatorChar, '/');
 
         // No absolute pathnames

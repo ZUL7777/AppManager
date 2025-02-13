@@ -2,16 +2,18 @@
 
 package io.github.muntashirakon.AppManager.main;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.usage.UsageStatsManager;
+import static io.github.muntashirakon.AppManager.compat.PackageManagerCompat.MATCH_UNINSTALLED_PACKAGES;
+import static io.github.muntashirakon.AppManager.utils.UIUtils.displayLongToast;
+import static io.github.muntashirakon.AppManager.utils.UIUtils.displayShortToast;
+
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.UserInfo;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
+import android.os.RemoteException;
+import android.os.UserHandleHidden;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
@@ -19,111 +21,148 @@ import android.text.style.RelativeSizeSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.SectionIndexer;
 import android.widget.TextView;
-import android.widget.Toast;
+
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.UiThread;
-import androidx.annotation.WorkerThread;
+import androidx.appcompat.widget.AppCompatImageView;
 import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import io.github.muntashirakon.AppManager.R;
-import io.github.muntashirakon.AppManager.apk.installer.PackageInstallerActivity;
-import io.github.muntashirakon.AppManager.backup.MetadataManager;
-import io.github.muntashirakon.AppManager.details.AppDetailsActivity;
-import io.github.muntashirakon.AppManager.settings.FeatureController;
-import io.github.muntashirakon.AppManager.types.IconLoaderThread;
-import io.github.muntashirakon.AppManager.users.Users;
-import io.github.muntashirakon.AppManager.utils.DateUtils;
-import io.github.muntashirakon.AppManager.utils.PackageUtils;
-import io.github.muntashirakon.AppManager.utils.UIUtils;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
-public class MainRecyclerAdapter extends RecyclerView.Adapter<MainRecyclerAdapter.ViewHolder>
+import io.github.muntashirakon.AppManager.R;
+import io.github.muntashirakon.AppManager.apk.installer.PackageInstallerActivity;
+import io.github.muntashirakon.AppManager.apk.installer.PackageInstallerCompat;
+import io.github.muntashirakon.AppManager.backup.dialog.BackupRestoreDialogFragment;
+import io.github.muntashirakon.AppManager.compat.ApplicationInfoCompat;
+import io.github.muntashirakon.AppManager.compat.PackageManagerCompat;
+import io.github.muntashirakon.AppManager.db.entity.Backup;
+import io.github.muntashirakon.AppManager.details.AppDetailsActivity;
+import io.github.muntashirakon.AppManager.self.SelfPermissions;
+import io.github.muntashirakon.AppManager.self.imagecache.ImageLoader;
+import io.github.muntashirakon.AppManager.settings.FeatureController;
+import io.github.muntashirakon.AppManager.types.UserPackagePair;
+import io.github.muntashirakon.AppManager.users.UserInfo;
+import io.github.muntashirakon.AppManager.users.Users;
+import io.github.muntashirakon.AppManager.utils.ArrayUtils;
+import io.github.muntashirakon.AppManager.utils.DateUtils;
+import io.github.muntashirakon.AppManager.utils.ThreadUtils;
+import io.github.muntashirakon.AppManager.utils.UIUtils;
+import io.github.muntashirakon.AppManager.utils.appearance.ColorCodes;
+import io.github.muntashirakon.dialog.SearchableItemsDialogBuilder;
+import io.github.muntashirakon.io.Paths;
+import io.github.muntashirakon.util.AdapterUtils;
+import io.github.muntashirakon.widget.MultiSelectionView;
+
+public class MainRecyclerAdapter extends MultiSelectionView.Adapter<MainRecyclerAdapter.ViewHolder>
         implements SectionIndexer {
-    static final String sections = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String sSections = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     private final MainActivity mActivity;
-    private final PackageManager mPackageManager;
     private String mSearchQuery;
     @GuardedBy("mAdapterList")
     private final List<ApplicationItem> mAdapterList = new ArrayList<>();
 
-    private static int mColorTransparent;
-    private static int mColorSemiTransparent;
-    private static int mColorHighlight;
-    private static int mColorDisabled;
-    private static int mColorStopped;
-    private static int mColorOrange;
-    private static int mColorPrimary;
-    private static int mColorSecondary;
-    private static int mColorRed;
+    private final int mColorGreen;
+    private final int mColorOrange;
+    private final int mColorPrimary;
+    private final int mColorSecondary;
+    private final int mQueryStringHighlight;
 
     MainRecyclerAdapter(@NonNull MainActivity activity) {
+        super();
         mActivity = activity;
-        mPackageManager = activity.getPackageManager();
-
-        mColorTransparent = Color.TRANSPARENT;
-        mColorSemiTransparent = ContextCompat.getColor(mActivity, R.color.semi_transparent);
-        mColorHighlight = ContextCompat.getColor(mActivity, R.color.highlight);
-        mColorDisabled = ContextCompat.getColor(mActivity, R.color.disabled_user);
-        mColorStopped = ContextCompat.getColor(mActivity, R.color.stopped);
-        mColorOrange = ContextCompat.getColor(mActivity, R.color.orange);
-        mColorPrimary = ContextCompat.getColor(mActivity, R.color.textColorPrimary);
-        mColorSecondary = ContextCompat.getColor(mActivity, R.color.textColorSecondary);
-        mColorRed = ContextCompat.getColor(mActivity, R.color.red);
-    }
-
-    @GuardedBy("mAdapterList")
-    void setDefaultList(List<ApplicationItem> list) {
-        new Thread(() -> {
-            synchronized (mAdapterList) {
-                mAdapterList.clear();
-                mAdapterList.addAll(list);
-                mSearchQuery = mActivity.mModel.getSearchQuery();
-                mActivity.runOnUiThread(this::notifyDataSetChanged);
-            }
-        }).start();
-    }
-
-    @GuardedBy("mAdapterList")
-    @WorkerThread
-    void clearSelection() {
-        if (mActivity.mModel == null) return;
-        synchronized (mAdapterList) {
-            final List<Integer> itemIds = new ArrayList<>();
-            int itemId;
-            for (ApplicationItem applicationItem : mActivity.mModel.getSelectedApplicationItems()) {
-                itemId = mAdapterList.indexOf(applicationItem);
-                if (itemId == -1) continue;
-                applicationItem.isSelected = false;
-                mAdapterList.set(itemId, applicationItem);
-                itemIds.add(itemId);
-            }
-            mActivity.runOnUiThread(() -> {
-                for (int id : itemIds) notifyItemChanged(id);
-            });
-            mActivity.mModel.clearSelection();
-        }
+        mColorGreen = ContextCompat.getColor(activity, io.github.muntashirakon.ui.R.color.stopped);
+        mColorOrange = ContextCompat.getColor(activity, io.github.muntashirakon.ui.R.color.orange);
+        mColorPrimary = ContextCompat.getColor(activity, io.github.muntashirakon.ui.R.color.textColorPrimary);
+        mColorSecondary = ContextCompat.getColor(activity, io.github.muntashirakon.ui.R.color.textColorSecondary);
+        mQueryStringHighlight = ColorCodes.getQueryStringHighlightColor(activity);
     }
 
     @GuardedBy("mAdapterList")
     @UiThread
-    void selectAll() {
+    void setDefaultList(List<ApplicationItem> list) {
+        if (mActivity.viewModel == null) return;
         synchronized (mAdapterList) {
-            for (int i = 0; i < mAdapterList.size(); ++i) {
-                mAdapterList.set(i, mActivity.mModel.select(mAdapterList.get(i)));
-                notifyItemChanged(i);
-            }
-            mActivity.handleSelection();
+            mSearchQuery = mActivity.viewModel.getSearchQuery();
+            AdapterUtils.notifyDataSetChanged(this, mAdapterList, list);
+            notifySelectionChange();
+        }
+    }
+
+    @GuardedBy("mAdapterList")
+    @Override
+    public void cancelSelection() {
+        super.cancelSelection();
+        mActivity.viewModel.cancelSelection();
+    }
+
+    @Override
+    public int getSelectedItemCount() {
+        if (mActivity.viewModel == null) return 0;
+        return mActivity.viewModel.getSelectedPackages().size();
+    }
+
+    @Override
+    protected int getTotalItemCount() {
+        if (mActivity.viewModel == null) return 0;
+        return mActivity.viewModel.getApplicationItemCount();
+    }
+
+    @GuardedBy("mAdapterList")
+    @Override
+    protected boolean isSelected(int position) {
+        synchronized (mAdapterList) {
+            return mAdapterList.get(position).isSelected;
+        }
+    }
+
+    @GuardedBy("mAdapterList")
+    @Override
+    protected void select(int position) {
+        synchronized (mAdapterList) {
+            mAdapterList.set(position, mActivity.viewModel.select(mAdapterList.get(position)));
+        }
+    }
+
+    @GuardedBy("mAdapterList")
+    @Override
+    protected void deselect(int position) {
+        synchronized (mAdapterList) {
+            mAdapterList.set(position, mActivity.viewModel.deselect(mAdapterList.get(position)));
+        }
+    }
+
+    @GuardedBy("mAdapterList")
+    @Override
+    public void toggleSelection(int position) {
+        synchronized (mAdapterList) {
+            super.toggleSelection(position);
+        }
+    }
+
+    @GuardedBy("mAdapterList")
+    @Override
+    public void selectAll() {
+        synchronized (mAdapterList) {
+            super.selectAll();
+        }
+    }
+
+    @GuardedBy("mAdapterList")
+    @Override
+    public void selectRange(int firstPosition, int secondPosition) {
+        synchronized (mAdapterList) {
+            super.selectRange(firstPosition, secondPosition);
         }
     }
 
@@ -137,126 +176,74 @@ public class MainRecyclerAdapter extends RecyclerView.Adapter<MainRecyclerAdapte
     @GuardedBy("mAdapterList")
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        // Cancel an existing icon loading operation
-        if (holder.iconLoader != null) holder.iconLoader.interrupt();
         final ApplicationItem item;
         synchronized (mAdapterList) {
             item = mAdapterList.get(position);
         }
+        MaterialCardView cardView = holder.itemView;
+        Context context = cardView.getContext();
         // Add click listeners
-        holder.itemView.setOnClickListener(v -> {
-            // Click listener:
-            // 1) If the app is not installed:
-            //    i.  Display a toast message saying that it's not installed if it's a backup-only app
-            //    ii. Offer to install the app if it can be installed
-            // 2) If installed, load the App Details page
-            // 3) If selection mode is on, select/deselect the current item instead of 1 & 2.
-            if (mActivity.mModel.getSelectedPackages().size() == 0) {
-                if (!item.isInstalled) {
-                    try {
-                        @SuppressLint("WrongConstant")
-                        ApplicationInfo info = mPackageManager.getApplicationInfo(item.packageName, PackageUtils.flagMatchUninstalled);
-                        if (info.publicSourceDir != null && FeatureController.isInstallerEnabled()) {
-                            Intent intent = new Intent(mActivity, PackageInstallerActivity.class);
-                            intent.setData(Uri.fromFile(new File(info.publicSourceDir)));
-                            mActivity.startActivity(intent);
-                        }
-                    } catch (PackageManager.NameNotFoundException ignore) {
-                    }
-                    Toast.makeText(mActivity, R.string.app_not_installed, Toast.LENGTH_SHORT).show();
-                } else {
-                    Intent appDetailsIntent = new Intent(mActivity, AppDetailsActivity.class);
-                    appDetailsIntent.putExtra(AppDetailsActivity.EXTRA_PACKAGE_NAME, item.packageName);
-                    if (item.userHandles.length > 0) {
-                        if (item.userHandles.length > 1) {
-                            String[] userNames = new String[item.userHandles.length];
-                            for (int i = 0; i < item.userHandles.length; ++i) {
-                                userNames[i] = mActivity.getString(R.string.user_with_id, item.userHandles[i]);
-                            }
-                            List<UserInfo> users = Users.getUsers();
-                            if (users != null) {
-                                for (UserInfo info : users) {
-                                    for (int i = 0; i < item.userHandles.length; ++i) {
-                                        if (info.id == item.userHandles[i]) {
-                                            userNames[i] = info.name == null ? String.valueOf(info.id) : info.name;
-                                        }
-                                    }
-                                }
-                            }
-                            new MaterialAlertDialogBuilder(mActivity)
-                                    .setTitle(R.string.select_user)
-                                    .setItems(userNames, (dialog, which) -> {
-                                        appDetailsIntent.putExtra(AppDetailsActivity.EXTRA_USER_HANDLE, item.userHandles[which]);
-                                        mActivity.startActivity(appDetailsIntent);
-                                        dialog.dismiss();
-                                    })
-                                    .setNegativeButton(R.string.cancel, null)
-                                    .show();
-                        } else {
-                            appDetailsIntent.putExtra(AppDetailsActivity.EXTRA_USER_HANDLE, item.userHandles[0]);
-                            mActivity.startActivity(appDetailsIntent);
-                        }
-                    } else mActivity.startActivity(appDetailsIntent);
-                }
-            } else toggleSelection(item, position);
+        cardView.setOnClickListener(v -> {
+            // If selection mode is on, select/deselect the current item instead of the default behaviour
+            if (isInSelectionMode()) {
+                toggleSelection(position);
+                return;
+            }
+            handleClick(item);
         });
-        holder.itemView.setOnLongClickListener(v -> {
+        cardView.setOnLongClickListener(v -> {
             // Long click listener: Select/deselect an app.
             // 1) Turn selection mode on if this is the first item in the selection list
             // 2) Select between last selection position and this position (inclusive) if selection mode is on
-            ApplicationItem lastSelectedItem = mActivity.mModel.getLastSelectedPackage();
-            int lastSelectedItemPosition = lastSelectedItem == null ? -1 : mAdapterList.indexOf(lastSelectedItem);
-            if (lastSelectedItemPosition >= 0) {
-                // Select from last selection to this selection
-                selectRange(lastSelectedItemPosition, position);
-            } else toggleSelection(item, position);
+            synchronized (mAdapterList) {
+                ApplicationItem lastSelectedItem = mActivity.viewModel.getLastSelectedPackage();
+                int lastSelectedItemPosition = lastSelectedItem == null ? -1 : mAdapterList.indexOf(lastSelectedItem);
+                if (lastSelectedItemPosition >= 0) {
+                    // Select from last selection to this selection
+                    selectRange(lastSelectedItemPosition, position);
+                } else toggleSelection(position);
+            }
             return true;
         });
-        holder.icon.setOnClickListener(v -> toggleSelection(item, position));
-        // Alternate background colors: selected > disabled > regular
-        if (item.isSelected) holder.mainView.setBackgroundColor(mColorHighlight);
-        else if (item.isDisabled) holder.mainView.setBackgroundColor(mColorDisabled);
-        else {
-            holder.mainView.setBackgroundColor(position % 2 == 0 ? mColorSemiTransparent : mColorTransparent);
+        holder.icon.setOnClickListener(v -> toggleSelection(position));
+        // Box-stroke colors: uninstalled > disabled > force-stopped > regular
+        if (!item.isInstalled) {
+            cardView.setStrokeColor(ColorCodes.getAppUninstalledIndicatorColor(context));
+        } else if (item.isDisabled) {
+            cardView.setStrokeColor(ColorCodes.getAppDisabledIndicatorColor(context));
+        } else if (item.isStopped) {
+            cardView.setStrokeColor(ColorCodes.getAppForceStoppedIndicatorColor(context));
+        } else {
+            cardView.setStrokeColor(Color.TRANSPARENT);
         }
-        // Add yellow star if the app is in debug mode
-        holder.favorite_icon.setVisibility(item.debuggable ? View.VISIBLE : View.INVISIBLE);
-        // Set version name
-        holder.version.setText(item.versionName);
-        // Set date and (if available,) days between first install and last update
-        String lastUpdateDate = DateUtils.formatDate(item.lastUpdateTime);
+        // Display yellow star if the app is in debug mode
+        holder.debugIcon.setVisibility(item.debuggable ? View.VISIBLE : View.INVISIBLE);
+        // Set date and (if available,) days between first installation and last update
+        String lastUpdateDate = DateUtils.formatDate(context, item.lastUpdateTime);
         if (item.firstInstallTime == item.lastUpdateTime) {
             holder.date.setText(lastUpdateDate);
         } else {
-            long days = TimeUnit.DAYS.convert(item.lastUpdateTime - item.firstInstallTime, TimeUnit.MILLISECONDS);
-            SpannableString ssDate = new SpannableString(mActivity.getResources()
+            long days = item.diffInstallUpdateInDays;
+            SpannableString ssDate = new SpannableString(context.getResources()
                     .getQuantityString(R.plurals.main_list_date_days, (int) days, lastUpdateDate, days));
             ssDate.setSpan(new RelativeSizeSpan(.8f), lastUpdateDate.length(),
                     ssDate.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             holder.date.setText(ssDate);
         }
         // Set date color to orange if app can read logs (and accepted)
-        if (mPackageManager.checkPermission(Manifest.permission.READ_LOGS, item.packageName)
-                == PackageManager.PERMISSION_GRANTED) {
-            holder.date.setTextColor(mColorOrange);
-        } else holder.date.setTextColor(mColorSecondary);
+        holder.date.setTextColor(item.canReadLogs ? mColorOrange : mColorSecondary);
         if (item.isInstalled) {
-            // Set kernel user ID
-            holder.sharedId.setText(String.valueOf(item.uid));
-            // Set kernel user ID text color to orange if the package is shared
-            if (item.sharedUserId != null) holder.sharedId.setTextColor(mColorOrange);
-            else holder.sharedId.setTextColor(mColorSecondary);
-        } else holder.sharedId.setText("");
+            // Set UID
+            if (item.uidOrAppIds != null) {
+                holder.userId.setText(item.uidOrAppIds);
+            }
+            // Set UID text color to orange if the package is shared
+            holder.userId.setTextColor(item.sharedUserId != null ? mColorOrange : mColorSecondary);
+        } else holder.userId.setText("");
         if (item.sha != null) {
             // Set issuer
-            String issuer;
-            try {
-                issuer = "CN=" + (item.sha.first).split("CN=", 2)[1];
-            } catch (ArrayIndexOutOfBoundsException e) {
-                issuer = item.sha.first;
-            }
             holder.issuer.setVisibility(View.VISIBLE);
-            holder.issuer.setText(issuer);
+            holder.issuer.setText(item.issuerShortName);
             // Set signature type
             holder.sha.setVisibility(View.VISIBLE);
             holder.sha.setText(item.sha.second);
@@ -265,148 +252,86 @@ public class MainRecyclerAdapter extends RecyclerView.Adapter<MainRecyclerAdapte
             holder.sha.setVisibility(View.GONE);
         }
         // Load app icon
-        holder.iconLoader = new IconLoaderThread(holder.icon, item);
-        holder.iconLoader.start();
+        holder.icon.setTag(item.packageName);
+        ImageLoader.getInstance().displayImage(item.packageName, item, holder.icon);
         // Set app label
         if (!TextUtils.isEmpty(mSearchQuery) && item.label.toLowerCase(Locale.ROOT).contains(mSearchQuery)) {
             // Highlight searched query
-            holder.label.setText(UIUtils.getHighlightedText(item.label, mSearchQuery, mColorRed));
+            holder.label.setText(UIUtils.getHighlightedText(item.label, mSearchQuery, mQueryStringHighlight));
         } else holder.label.setText(item.label);
         // Set app label color to red if clearing user data not allowed
-        if (item.isInstalled && (item.flags & ApplicationInfo.FLAG_ALLOW_CLEAR_USER_DATA) == 0)
+        if (item.isInstalled && !item.allowClearingUserData) {
             holder.label.setTextColor(Color.RED);
-        else holder.label.setTextColor(mColorPrimary);
+        } else holder.label.setTextColor(mColorPrimary);
         // Set package name
         if (!TextUtils.isEmpty(mSearchQuery) && item.packageName.toLowerCase(Locale.ROOT).contains(mSearchQuery)) {
             // Highlight searched query
-            holder.packageName.setText(UIUtils.getHighlightedText(item.packageName, mSearchQuery, mColorRed));
+            holder.packageName.setText(UIUtils.getHighlightedText(item.packageName, mSearchQuery, mQueryStringHighlight));
         } else holder.packageName.setText(item.packageName);
-        // Set package name color to dark cyan if the app is in stopped/force closed state
-        if ((item.flags & ApplicationInfo.FLAG_STOPPED) != 0)
-            holder.packageName.setTextColor(mColorStopped);
-        else holder.packageName.setTextColor(mColorSecondary);
+        // Set package name color to orange if the app has known tracker components
+        if (item.trackerCount > 0) {
+            holder.packageName.setTextColor(ColorCodes.getComponentTrackerIndicatorColor(context));
+        } else holder.packageName.setTextColor(mColorSecondary);
         // Set version (along with HW accelerated, debug and test only flags)
-        CharSequence version = holder.version.getText();
-        if (item.isInstalled && (item.flags & ApplicationInfo.FLAG_HARDWARE_ACCELERATED) == 0)
-            version = "_" + version;
-        if ((item.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) version = "debug" + version;
-        if ((item.flags & ApplicationInfo.FLAG_TEST_ONLY) != 0) version = "~" + version;
-        holder.version.setText(version);
+        holder.version.setText(item.versionTag);
         // Set version color to dark cyan if the app is inactive
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            UsageStatsManager mUsageStats;
-            mUsageStats = mActivity.getSystemService(UsageStatsManager.class);
-            if (mUsageStats != null && mUsageStats.isAppInactive(item.packageName))
-                holder.version.setTextColor(mColorStopped);
-            else holder.version.setTextColor(mColorSecondary);
-        }
+        holder.version.setTextColor(item.isAppInactive ? mColorGreen : mColorSecondary);
         // Set app type: system or user app (along with large heap, suspended, multi-arch,
         // has code, vm safe mode)
-        String isSystemApp;
         if (item.isInstalled) {
-            if ((item.flags & ApplicationInfo.FLAG_SYSTEM) != 0)
-                isSystemApp = mActivity.getString(R.string.system);
-            else isSystemApp = mActivity.getString(R.string.user);
-            if ((item.flags & ApplicationInfo.FLAG_LARGE_HEAP) != 0) isSystemApp += "#";
-            if ((item.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) isSystemApp += "°";
-            if ((item.flags & ApplicationInfo.FLAG_MULTIARCH) != 0) isSystemApp += "X";
-            if ((item.flags & ApplicationInfo.FLAG_HAS_CODE) == 0) isSystemApp += "0";
-            if ((item.flags & ApplicationInfo.FLAG_VM_SAFE_MODE) != 0) isSystemApp += "?";
+            String isSystemApp = context.getString(item.isSystem ? R.string.system : R.string.user) + item.appTypePostfix;
             holder.isSystemApp.setText(isSystemApp);
-            // Set app type text color to magenta if the app is persistent
-            if ((item.flags & ApplicationInfo.FLAG_PERSISTENT) != 0)
-                holder.isSystemApp.setTextColor(Color.MAGENTA);
-            else holder.isSystemApp.setTextColor(mColorSecondary);
         } else {
             holder.isSystemApp.setText("-");
-            holder.isSystemApp.setTextColor(mColorSecondary);
         }
+        // Set app type text color to magenta if the app is persistent
+        holder.isSystemApp.setTextColor(item.isPersistent ? Color.MAGENTA : mColorSecondary);
         // Set SDK
-        if (item.isInstalled) {
-            holder.size.setText(String.format(Locale.getDefault(), "SDK %d", item.sdk));
+        if (item.sdkString != null) {
+            holder.size.setText(item.sdkString);
         } else holder.size.setText("-");
         // Set SDK color to orange if the app is using cleartext (e.g. HTTP) traffic
-        if ((item.flags & ApplicationInfo.FLAG_USES_CLEARTEXT_TRAFFIC) != 0) {
-            holder.size.setTextColor(mColorOrange);
-        } else holder.size.setTextColor(mColorSecondary);
+        holder.size.setTextColor(item.usesCleartextTraffic ? mColorOrange : mColorSecondary);
         // Check for backup
-        if (item.metadata != null) {
+        if (item.backup != null) {
             holder.backupIndicator.setVisibility(View.VISIBLE);
             holder.backupInfo.setVisibility(View.VISIBLE);
             holder.backupInfoExt.setVisibility(View.VISIBLE);
             holder.backupIndicator.setText(R.string.backup);
             int indicatorColor;
             if (item.isInstalled) {
-                if (item.metadata.versionCode >= item.versionCode) {
+                if (item.backup.versionCode >= item.versionCode) {
                     // Up-to-date backup
-                    indicatorColor = mColorStopped;
+                    indicatorColor = ColorCodes.getBackupLatestIndicatorColor(context);
                 } else {
                     // Outdated backup
-                    indicatorColor = mColorOrange;
+                    indicatorColor = ColorCodes.getBackupOutdatedIndicatorColor(context);
                 }
             } else {
                 // App not installed
-                indicatorColor = mColorRed;
+                indicatorColor = ColorCodes.getBackupUninstalledIndicatorColor(context);
             }
             holder.backupIndicator.setTextColor(indicatorColor);
-            MetadataManager.Metadata metadata = item.metadata;
-            long days = TimeUnit.DAYS.convert(System.currentTimeMillis() -
-                    metadata.backupTime, TimeUnit.MILLISECONDS);
+            Backup backup = item.backup;
+            long days = item.lastBackupDays;
             holder.backupInfo.setText(String.format("%s: %s, %s %s",
-                    mActivity.getString(R.string.latest_backup), mActivity.getResources()
+                    context.getString(R.string.latest_backup), context.getResources()
                             .getQuantityString(R.plurals.usage_days, (int) days, days),
-                    mActivity.getString(R.string.version), metadata.versionName));
-            StringBuilder extBulder = new StringBuilder();
-            if (metadata.flags.backupApkFiles()) extBulder.append("apk");
-            if (metadata.flags.backupData()) {
-                if (extBulder.length() > 0) extBulder.append("+");
-                extBulder.append("data");
-            }
-            if (metadata.hasRules) {
-                if (extBulder.length() > 0) extBulder.append("+");
-                extBulder.append("rules");
-            }
-            holder.backupInfoExt.setText(extBulder.toString());
+                    context.getString(R.string.version), backup.versionName));
+            holder.backupInfoExt.setText(item.backupFlagsStr);
         } else {
             holder.backupIndicator.setVisibility(View.GONE);
             holder.backupInfo.setVisibility(View.GONE);
             holder.backupInfoExt.setVisibility(View.GONE);
         }
-    }
-
-    @GuardedBy("mAdapterList")
-    @UiThread
-    public void toggleSelection(@NonNull ApplicationItem item, int position) {
-        synchronized (mAdapterList) {
-            if (mActivity.mModel.getSelectedPackages().containsKey(item.packageName)) {
-                mAdapterList.set(position, mActivity.mModel.deselect(item));
-            } else {
-                mAdapterList.set(position, mActivity.mModel.select(item));
-            }
-        }
-        notifyItemChanged(position);
-        mActivity.handleSelection();
-    }
-
-    @GuardedBy("mAdapterList")
-    @UiThread
-    public void selectRange(int firstPosition, int secondPosition) {
-        int beginPosition = Math.min(firstPosition, secondPosition);
-        int endPosition = Math.max(firstPosition, secondPosition);
-        synchronized (mAdapterList) {
-            for (int position = beginPosition; position <= endPosition; ++position) {
-                mAdapterList.set(position, mActivity.mModel.select(mAdapterList.get(position)));
-            }
-        }
-        notifyItemRangeChanged(beginPosition, endPosition - beginPosition + 1);
-        mActivity.handleSelection();
+        super.onBindViewHolder(holder, position);
     }
 
     @GuardedBy("mAdapterList")
     @Override
-    public long getItemId(int i) {
+    public long getItemId(int position) {
         synchronized (mAdapterList) {
-            return mAdapterList.get(i).hashCode();
+            return mAdapterList.get(position).hashCode();
         }
     }
 
@@ -424,8 +349,8 @@ public class MainRecyclerAdapter extends RecyclerView.Adapter<MainRecyclerAdapte
         synchronized (mAdapterList) {
             for (int i = 0; i < getItemCount(); i++) {
                 String item = mAdapterList.get(i).label;
-                if (item.length() > 0) {
-                    if (item.charAt(0) == sections.charAt(section))
+                if (!item.isEmpty()) {
+                    if (item.charAt(0) == sSections.charAt(section))
                         return i;
                 }
             }
@@ -440,43 +365,152 @@ public class MainRecyclerAdapter extends RecyclerView.Adapter<MainRecyclerAdapte
 
     @Override
     public Object[] getSections() {
-        String[] sectionsArr = new String[sections.length()];
-        for (int i = 0; i < sections.length(); i++)
-            sectionsArr[i] = "" + sections.charAt(i);
+        String[] sectionsArr = new String[sSections.length()];
+        for (int i = 0; i < sSections.length(); i++)
+            sectionsArr[i] = String.valueOf(sSections.charAt(i));
 
         return sectionsArr;
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
-        View mainView;
-        ImageView icon;
-        ImageView favorite_icon;
+    private void handleClick(@NonNull ApplicationItem item) {
+        if (!item.isInstalled || item.userIds.length == 0) {
+            // The app should not be installed. But make sure this is really true. (For current user only)
+            ApplicationInfo info;
+            try {
+                info = PackageManagerCompat.getApplicationInfo(item.packageName, MATCH_UNINSTALLED_PACKAGES
+                                | PackageManagerCompat.MATCH_STATIC_SHARED_AND_SDK_LIBRARIES,
+                        UserHandleHidden.myUserId());
+            } catch (RemoteException | PackageManager.NameNotFoundException e) {
+                showBackupRestoreDialogOrAppNotInstalled(item);
+                return;
+            }
+            // 1. Check if the app was really uninstalled.
+            if (ApplicationInfoCompat.isInstalled(info)) {
+                // The app is already installed, and we were wrong to assume that it was installed.
+                // Update data before opening it.
+                item.isInstalled = true;
+                item.userIds = new int[]{UserHandleHidden.myUserId()};
+                Intent intent = AppDetailsActivity.getIntent(mActivity, item.packageName, UserHandleHidden.myUserId());
+                mActivity.startActivity(intent);
+                return;
+            }
+            // 2. If the app can be installed, offer it to install again.
+            if (FeatureController.isInstallerEnabled()) {
+                if (ApplicationInfoCompat.isSystemApp(info) && SelfPermissions.canInstallExistingPackages()) {
+                    // Install existing app instead of installing as an update
+                    mActivity.startActivity(PackageInstallerActivity.getLaunchableInstance(mActivity, item.packageName));
+                    return;
+                }
+                // Otherwise, try with APK files
+                // FIXME: 1/4/23 Include splits
+                if (Paths.exists(info.publicSourceDir)) {
+                    mActivity.startActivity(PackageInstallerActivity.getLaunchableInstance(mActivity,
+                            Uri.fromFile(new File(info.publicSourceDir))));
+                    return;
+                }
+            }
+            // 3. The app might be uninstalled without clearing data
+            if (ApplicationInfoCompat.isSystemApp(info)) {
+                // The app is a system app, there's no point in asking to uninstall it again
+                showBackupRestoreDialogOrAppNotInstalled(item);
+                return;
+            }
+            new MaterialAlertDialogBuilder(mActivity)
+                    .setTitle(mActivity.getString(R.string.uninstall_app, item.label))
+                    .setMessage(R.string.uninstall_app_again_message)
+                    .setNegativeButton(R.string.no, null)
+                    .setPositiveButton(R.string.yes, (dialog, which) -> ThreadUtils.postOnBackgroundThread(() -> {
+                        PackageInstallerCompat installer = PackageInstallerCompat.getNewInstance();
+                        installer.setAppLabel(item.label);
+                        boolean uninstalled = installer.uninstall(item.packageName, UserHandleHidden.myUserId(), false);
+                        ThreadUtils.postOnMainThread(() -> {
+                            if (uninstalled) {
+                                displayLongToast(R.string.uninstalled_successfully, item.label);
+                            } else {
+                                displayLongToast(R.string.failed_to_uninstall, item.label);
+                            }
+                        });
+                    }))
+                    .show();
+            return;
+        }
+        // The app is installed
+        if (item.userIds.length == 1) {
+            int[] userHandles = Users.getUsersIds();
+            if (ArrayUtils.contains(userHandles, item.userIds[0])) {
+                Intent intent = AppDetailsActivity.getIntent(mActivity, item.packageName, item.userIds[0]);
+                mActivity.startActivity(intent);
+                return;
+            }
+            // Outside our jurisdiction
+            showBackupRestoreDialogOrAppNotInstalled(item);
+            return;
+        }
+        // More than a user, ask the user to select one
+        CharSequence[] userNames = new String[item.userIds.length];
+        List<UserInfo> users = Users.getUsers();
+        for (UserInfo info : users) {
+            for (int i = 0; i < item.userIds.length; ++i) {
+                if (info.id == item.userIds[i]) {
+                    userNames[i] = info.toLocalizedString(mActivity);
+                }
+            }
+        }
+        new SearchableItemsDialogBuilder<>(mActivity, userNames)
+                .setTitle(R.string.select_user)
+                .setOnItemClickListener((dialog, which, item1) -> {
+                    Intent intent = AppDetailsActivity.getIntent(mActivity, item.packageName, item.userIds[which]);
+                    mActivity.startActivity(intent);
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void showBackupRestoreDialogOrAppNotInstalled(@NonNull ApplicationItem item) {
+        if (item.backup == null) {
+            // No backups
+            displayShortToast(R.string.app_not_installed);
+            return;
+        }
+        // Has backups
+        BackupRestoreDialogFragment fragment = BackupRestoreDialogFragment.getInstance(
+                Collections.singletonList(new UserPackagePair(
+                        item.packageName, UserHandleHidden.myUserId())));
+        fragment.setOnActionBeginListener(mode -> mActivity.showProgressIndicator(true));
+        fragment.setOnActionCompleteListener((mode, failedPackages) -> mActivity.showProgressIndicator(false));
+        fragment.show(mActivity.getSupportFragmentManager(), BackupRestoreDialogFragment.TAG);
+    }
+
+    public static class ViewHolder extends MultiSelectionView.ViewHolder {
+        MaterialCardView itemView;
+        AppCompatImageView icon;
+        AppCompatImageView debugIcon;
         TextView label;
         TextView packageName;
         TextView version;
         TextView isSystemApp;
         TextView date;
         TextView size;
-        TextView sharedId;
+        TextView userId;
         TextView issuer;
         TextView sha;
         TextView backupIndicator;
         TextView backupInfo;
         TextView backupInfoExt;
-        IconLoaderThread iconLoader;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            mainView = itemView.findViewById(R.id.main_view);
+            this.itemView = (MaterialCardView) itemView;
             icon = itemView.findViewById(R.id.icon);
-            favorite_icon = itemView.findViewById(R.id.favorite_icon);
+            debugIcon = itemView.findViewById(R.id.favorite_icon);
             label = itemView.findViewById(R.id.label);
             packageName = itemView.findViewById(R.id.packageName);
             version = itemView.findViewById(R.id.version);
             isSystemApp = itemView.findViewById(R.id.isSystem);
             date = itemView.findViewById(R.id.date);
             size = itemView.findViewById(R.id.size);
-            sharedId = itemView.findViewById(R.id.shareid);
+            userId = itemView.findViewById(R.id.shareid);
             issuer = itemView.findViewById(R.id.issuer);
             sha = itemView.findViewById(R.id.sha);
             backupIndicator = itemView.findViewById(R.id.backup_indicator);

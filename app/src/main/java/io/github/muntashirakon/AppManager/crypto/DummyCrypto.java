@@ -2,46 +2,45 @@
 
 package io.github.muntashirakon.AppManager.crypto;
 
-import java.io.File;
-import java.io.IOException;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import androidx.annotation.NonNull;
-import io.github.muntashirakon.AppManager.utils.IOUtils;
+import io.github.muntashirakon.io.Path;
 
 public class DummyCrypto implements Crypto {
-    File[] newFiles;
+    @Nullable
+    private Path[] mNewFiles;
 
     @Override
-    public boolean encrypt(@NonNull File[] files) {
+    public void encrypt(@NonNull Path[] files) {
         // Have to return new files to be processed further
-        newFiles = files;
-        return true;
+        mNewFiles = files;
     }
 
     @Override
-    public void encrypt(@NonNull InputStream unencryptedStream, @NonNull OutputStream encryptedStream) throws IOException {
+    public void encrypt(@NonNull InputStream unencryptedStream, @NonNull OutputStream encryptedStream) {
         // Do nothing since both are the same stream
     }
 
     @Override
-    public boolean decrypt(@NonNull File[] files) {
+    public void decrypt(@NonNull Path[] files) {
         // The new files will be deleted, so don't send
-        newFiles = null;
-        return true;
+        mNewFiles = null;
     }
 
     @Override
-    public void decrypt(@NonNull InputStream encryptedStream, @NonNull OutputStream unencryptedStream) throws IOException {
+    public void decrypt(@NonNull InputStream encryptedStream, @NonNull OutputStream unencryptedStream) {
         // Do nothing since both are the same stream
     }
 
     @NonNull
     @Override
-    public File[] getNewFiles() {
-        if (newFiles == null) return new File[0];
-        return newFiles;
+    public Path[] getNewFiles() {
+        if (mNewFiles == null) return new Path[0];
+        return mNewFiles;
     }
 
     @Override

@@ -6,8 +6,10 @@ import android.os.RemoteException;
 
 import androidx.annotation.NonNull;
 
-import java.io.File;
 import java.io.IOException;
+
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.Paths;
 
 public class PseudoRules extends RulesStorageManager {
     public PseudoRules(@NonNull String packageName, int userHandle) {
@@ -20,17 +22,18 @@ public class PseudoRules extends RulesStorageManager {
         // Do nothing
     }
 
-    public void loadExternalEntries(File file) throws IOException, RemoteException {
+    public void loadExternalEntries(Path file) throws IOException, RemoteException {
         super.loadEntries(file, true);
     }
 
     /**
      * No rules will be loaded
+     *
      * @return /dev/null
      */
     @NonNull
     @Override
-    protected File getDesiredFile() {
-        return new File("/dev/null");
+    protected Path getDesiredFile(boolean create) {
+        return Paths.get("/dev/null");
     }
 }

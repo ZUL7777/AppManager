@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<?xml version="1.0" encoding="utf-8"?><!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="_lang_tag" translatable="false">en</string>
     <string name="uninstall">Uninstall</string>
@@ -30,9 +29,7 @@
     <string name="declared_permission">Permissions</string>
     <string name="shared_libs">Shared libs</string>
     <string name="group">Group</string>
-    <string name="protection_level">Protection level</string>
     <string name="uses_feature">Uses features</string>
-    <string name="gles_ver">Req. OpenGL ES version</string>
     <string name="no_feature">No features</string>
     <string name="sort_by_shared_user_id">Shared User ID</string>
     <string name="shared_user_id">Shared User ID</string>
@@ -81,59 +78,64 @@
     <string name="user_id">User ID</string>
     <string name="main_activity">Main Activity</string>
     <string name="empty_package_name">Empty package name</string>
-    <string name="instructions">Instructions</string>
     <string name="error_creating_shortcut">Error creating shortcut</string>
     <string name="error_verbose_pin_shortcut">Current launcher does not support PinShortcut. Unable to create shortcut.</string>
     <string name="starting_activity">Starting activity: <xliff:g id="activity_name" example=".main.MainActivity">%1$s</xliff:g></string>
     <string name="create_shortcut">Create Shortcut</string>
-    <string name="edit_shortcut">Edit Shortcut</string>
     <string name="shortcut_name">Shortcut Name</string>
     <string name="package_name">Package Name</string>
     <string name="class_name">Class Name</string>
-    <string name="insert_icon">Insert Icon</string>
-    <string name="error_invalid_icon_resource">Invalid icon resource</string>
-    <string name="error_invalid_icon_format">Invalid icon format</string>
     <string name="icon_picker">Icon Picker</string>
     <string name="license">License</string>
     <string name="license_message" translatable="false"><a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General
         Public License v3.0</a></string>
-    <string name="copyright_message" translatable="false">© 2020–2021 <a href="https://github.com/MuntashirAkon">Muntashir Al-Islam</a></string>
+    <string name="copyright_message" translatable="false">© 2020–2024 <a href="https://github.com/MuntashirAkon">Muntashir Al-Islam</a></string>
     <string name="third_party">Third-party Libraries and Icons</string>
     <string name="third_party_message" translatable="false">-
-        <a href="https://github.com/tananaev/adblib">ADB Library</a> (BSD-3-Clause)
-        \n- <a href="https://github.com/zhanghai/AndroidFastScroll">AndroidFastScroll</a> (Apache 2.0)
+        <a href="https://github.com/zhanghai/AndroidFastScroll">AndroidFastScroll</a> (Apache 2.0)
+        \n- <a href="https://github.com/LSPosed/AndroidHiddenApiBypass">AndroidHiddenApiBypass</a> (Apache 2.0)
         \n- <a href="https://github.com/MuntashirAkon/apk-parser">APK-parser</a> (BSD-2-Clause)
         \n- <a href="https://github.com/MuntashirAkon/apksig-android">apksig for android</a> (Apache 2.0)
+        \n- <a href="https://github.com/REAndroid/ARSCLib">ARSCLib</a> (Apache 2.0)
         \n- <a href="https://github.com/bcgit/bc-java">Bouncy Castle</a> (MIT)
-        \n- <a href="https://bitbucket.org/oF2pks/fdroid-classyshark3xodus">ClassySharkAndroid</a> (Apache 2.0)
         \n- <a href="https://commons.apache.org/proper/commons-compress/">Commons Compress</a> (Apache 2.0)
         \n- <a href="https://github.com/dkanada/frost">Frost</a> Icons (GPLv3.0)
+        \n- <a href="https://github.com/RikkaApps/HiddenApiRefinePlugin">HiddenApiRefinePlugin</a> (MIT)
+        \n- <a href="https://github.com/skylot/jadx">JADX</a> (Apache 2.0)
+        \n- <a href="https://github.com/MuntashirAkon/libadb-android">LibADB</a> (Apache 2.0/GPLv3.0)
         \n- <a href="https://github.com/topjohnwu/libsu">libsu</a> (Apache 2.0)
-        \n- <a href="https://github.com/YarikSOffice/lingver">Lingver</a> (MIT)
         \n- <a href="https://github.com/material-components/material-components-android">Material Components</a> (Apache 2.0)
         \n- <a href="https://github.com/google/material-design-icons">Material Design Icons</a> (Apache 2.0)
-        \n- <a href="https://github.com/ChickenHook/RestrictionBypass">RestrictionBypass</a> (Apachhe 2.0)
+        \n- <a href="https://github.com/JesusFreke/smali">Smali/basksmali</a> (MIT/Apache 2.0)
+        \n- <a href="https://github.com/Rosemoe/sora-editor">sora-editor</a> (LGPL-2.1)
+        \n- <a href="https://github.com/MuntashirAkon/spake2-java">SPAKE2 for Java</a> (GPLv3.0)
         \n- <a href="https://github.com/MuntashirAkon/sun-security-android">sun.security for Android</a> (GPL-2.0 \"Classpath Exception\")
-        \n- <a href="https://github.com/MuntashirAkon/unapkm-android">UnAPKM Android</a> (Apache 2.0)
-    </string>
+        \n- <a href="https://github.com/MuntashirAkon/unapkm-android">UnAPKM Android</a> (Apache 2.0)</string>
     <string name="credits">Credits</string>
     <string name="credits_message">To the authors of
         \n- The Android Open Source Project
+        \n- <a href="https://github.com/zhaobozhen/libraries">Absinthe\'s libraries</a>
         \n- <a href="https://github.com/butzist/ActivityLauncher">Activity Launcher</a>
         \n- <a href="https://bitbucket.org/oF2pks/fdroid-applications-info">Apps_packages Info</a>
         \n- <a href="https://github.com/zhaobao/AppsMonitor">AppsMonitor</a>
         \n- <a href="https://github.com/8enet/AppOpsX">AppOpsX</a>
+        \n- <a href="https://github.com/gabrielemariotti/changeloglib">ChangeLog Library</a>
+        \n- <a href="https://bitbucket.org/oF2pks/fdroid-classyshark3xodus">ClassySharkAndroid</a>
         \n- <a href="https://github.com/billthefarmer/editor">Editor</a>
+        \n- <a href="https://github.com/Raival-e/File-Explorer">File Explorer</a>
+        \n- <a href="https://github.com/nex3z/FlowLayout">FlowLayout</a>
         \n- <a href="https://github.com/k3b/intent-intercept">Intent Intercept</a>
+        \n- <a href="https://github.com/YarikSOffice/lingver">Lingver</a>
+        \n- <a href="https://github.com/topjohnwu/Magisk">Magisk</a>
+        \n- <a href="https://github.com/zhanghai/MaterialFiles">Material Files</a>
         \n- <a href="https://github.com/pluscubed/matlog">MatLog</a>
         \n- <a href="https://github.com/matrix-org/matrix-android-sdk">Matrix Android SDK</a>
         \n- <a href="https://github.com/jensstein/oandbackup">OAndBackup</a>
         \n- <a href="https://github.com/open-keychain/open-keychain">Open Keychain</a>
         \n- <a href="https://github.com/Aefyr/SAI">SAI</a>
         \n- <a href="https://github.com/RikkaApps/Shizuku">Shizuku</a>
-        \n- <a href="https://github.com/tuyafeng/Watt">Watt</a>
-        \nOriginal logo credit: <a href="https://github.com/Atrate">Atrate</a>.
-    </string>
+        \n- <a href="https://github.com/eclipse/tm4e">tm4e</a>
+        \n- <a href="https://github.com/tuyafeng/Watt">Watt</a></string>
     <string name="word_wrap">Toggle word wrap</string>
     <string name="class_viewer">Class Viewer</string>
     <string name="toggle_class_listing">Toggle Class Listing</string>
@@ -149,7 +151,6 @@
         <item quantity="one"><xliff:g id="tracker_no" example="8">%1$d</xliff:g> trackers with <xliff:g id="class_no" example="50">%2$d</xliff:g> classes</item>
         <item quantity="other"><xliff:g id="tracker_no" example="8">%1$d</xliff:g> trackers with <xliff:g id="class_no" example="50">%2$d</xliff:g> classes</item>
     </plurals>
-    <string name="tested_signatures_on_classes_and_time_taken" tools:ignore="PluralsCandidate">Tested <xliff:g id="signature_no" example="342">%1$d</xliff:g> signatures on <xliff:g id="class_no" example="6000">%2$d</xliff:g> classes.\nTime taken <xliff:g id="time" example="10000">%3$d</xliff:g> ms (<xliff:g id="iteration_no" example="100000">%4$d</xliff:g> iterations).</string>
     <string name="found_trackers">Found Trackers:</string>
     <string name="tracker_details">Tracker details</string>
     <string name="tracker_classes">Tracker classes</string>
@@ -176,7 +177,14 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hrs</item>
     </plurals>
-    <string name="usage_min">%1$d min</string>
+    <plurals name="usage_minutes">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d mins</item>
+    </plurals>
+    <plurals name="usage_seconds">
+        <item quantity="one">%1$d sec</item>
+        <item quantity="other">%1$d secs</item>
+    </plurals>
     <string name="usage_less_than_a_minute">Less than a minute</string>
     <string name="go_back">Go back</string>
     <string name="go">Go</string>
@@ -226,13 +234,12 @@
     <string name="view_in_settings">View in Settings</string>
     <string name="uninstall_app_message">Do you want to uninstall this app?</string>
     <string name="failed_to_uninstall">Could not uninstall <xliff:g id="app_name" example="App Manager">%1$s</xliff:g>.</string>
+    <string name="failed_to_uninstall_app">Uninstallation failed</string>
     <string name="uninstalled_successfully"><xliff:g id="app_name" example="App Manager">%1$s</xliff:g> has been uninstalled.</string>
     <string name="uninstall_system_app_message">This is a system app. Are you sure want to uninstall this app?</string>
     <string name="stopped">Stopped</string>
     <string name="disable">Disable</string>
     <string name="enable">Enable</string>
-    <string name="failed_to_disable">Could not disable <xliff:g id="app_name" example="App Manager">%1$s</xliff:g>.</string>
-    <string name="failed_to_enable">Could not enable <xliff:g id="app_name" example="App Manager">%1$s</xliff:g>.</string>
     <string name="force_stop">Force-stop</string>
     <string name="failed_to_stop">Could not stop <xliff:g id="app_name" example="App Manager">%1$s</xliff:g>.</string>
     <string name="storage_and_cache">Storage and Cache</string>
@@ -248,10 +255,9 @@
     <string name="pref_global_blocking_enabled_msg">Lets you block any component of any app without explicitly turning on blocking for the app.</string>
     <string name="usage_access">Usage access</string>
     <string name="app_settings">Settings</string>
-    <string name="only_works_in_root_mode">Only works in root mode</string>
     <string name="usage_yesterday">Yesterday</string>
     <string name="exodus_link">\u03b5xodus Link</string>
-    <string name="sort_by_disabled_app">Disabled first</string>
+    <string name="second_degree_tracker_note">² prefix indicates that the trackers are in the <a href="https://etip.exodus-privacy.eu.org/">ETIP stand-by list</a> i.e. whether they are actual trackers are still being investigated.</string>
     <string name="sort_by_blocked_components">Blocked first</string>
     <string name="external_data_dir">External Data Directory</string>
     <string name="external_multiple_data_dir">External Data Directory <xliff:g id="dir_no" example="1">%1$d</xliff:g></string>
@@ -274,7 +280,7 @@
         <item quantity="other">Could not import %1$d files.</item>
     </plurals>
     <string name="apk_updater">APK Updater</string>
-    <string name="store">Store</string>
+    <string name="open_in_aurora_store" translatable="false">Store</string>
     <string name="running_apps">Running Apps</string>
     <string name="kill_process">Kill</string>
     <string name="disable_background_run">Prevent background operation</string>
@@ -290,10 +296,6 @@
         <item quantity="one">Could not clear data from %1$d app</item>
         <item quantity="other">Could not clear data from %1$d apps</item>
     </plurals>
-    <plurals name="alert_failed_to_disable">
-        <item quantity="one">Could not disable %1$d app</item>
-        <item quantity="other">Could not disable %1$d apps</item>
-    </plurals>
     <plurals name="alert_failed_to_uninstall">
         <item quantity="one">Could not uninstall %1$d app</item>
         <item quantity="other">Could not uninstall %1$d apps</item>
@@ -308,7 +310,6 @@
         <item quantity="other">Could not force-stop %1$d apps</item>
     </plurals>
     <string name="toggle_kill_for_system_apps">Toggle kill system apps</string>
-    <string name="app_op_cannot_be_disabled">This app op cannot be disabled. (Possibly a read-only app op depended on another.)</string>
     <string name="permission_name">Permission Name</string>
     <string name="mode">Mode</string>
     <string name="running">Running</string>
@@ -378,21 +379,24 @@
     <string name="install">Install</string>
     <string name="update">Update</string>
     <string name="source_code">Source Code</string>
-    <string name="source_code_links">GitHub: https://github.com/MuntashirAkon/AppManager
-        \nGitLab: https://gitlab.com/muntashir/AppManager
-        \nRiseup: https://0xacab.org/muntashir/AppManager
-        \nCodeberg: https://codeberg.org/muntashir/AppManager</string>
-    <string name="community">Telegram Community</string>
-    <string name="community_links">Update Channel: https://t.me/AppManagerChannel
-        \nSupport Group: https://t.me/AppManagerAndroid
-        \nTwitter: https://twitter.com/AMUpdateChannel</string>
+    <string name="source_code_links"><a href="https://github.com/MuntashirAkon/AppManager">GitHub</a> •
+        <a href="https://gitlab.com/muntashir/AppManager">GitLab</a> •
+        <a href="https://0xacab.org/muntashir/AppManager">Riseup</a> •
+        <a href="https://codeberg.org/muntashir/AppManager">Codeberg</a></string>
+    <string name="community">Community</string>
+    <string name="community_links"><a href="https://matrix.to/#/#appmanager:matrix.org">Matrix</a> •
+        <a href="https://t.me/AppManagerChannel">Telegram</a> •
+        <a href="https://x.com/AppManagerNews">Twitter/X</a> •
+        <a href="https://floss.social/@appmanager">Mastodon</a></string>
     <string name="pref_import_existing">Import existing rules</string>
     <string name="pref_import_existing_msg">Add components disabled by others apps to App Manager.
         Be careful when using this tool as there can be many false positives. Choose only the apps you\'re certain about.</string>
     <string name="clear_cache">Clear Cache</string>
     <string name="block_unblock_trackers_description">Block or unblock ad and tracking components in all the installed apps</string>
     <string name="block_components_dots">Block components…</string>
-    <string name="block_components_description">Block all components identified by the given signatures</string>
+    <string name="block_unblock_components_dots">Block/unblock components…</string>
+    <string name="unblock_components_dots">Unblock components…</string>
+    <string name="block_unblock_components_description">Block or unblock all components identified by the given signatures</string>
     <string name="deny_app_ops_description">Set a mode for app operations identified by the constant values, i.e. <tt>63</tt> or <tt>RUN_IN_BACKGROUND</tt></string>
     <string name="clear_data_from_uninstalled_apps">Clear data from uninstalled apps</string>
     <string name="clear_data_from_uninstalled_apps_description">Clear data from apps that are uninstalled with <tt>DONT_DELETE_DATA</tt> flag</string>
@@ -414,20 +418,17 @@
     </plurals>
     <string name="termux">Termux</string>
     <string name="package_name_is_installed_successfully"><xliff:g id="app_name" example="App Manager">%1$s</xliff:g> installed</string>
-    <string name="failed_to_install_package_name">Could not install <xliff:g id="app_name" example="App Manager">%1$s</xliff:g></string>
     <string name="filter">Filter</string>
     <string name="filter_user_apps">User apps</string>
     <string name="filter_system_apps">System apps</string>
-    <string name="filter_apps_with_rules">Apps with rules</string>
+    <string name="filter_apps_with_rules">With rules</string>
     <string name="select_all">Select All</string>
-    <string name="filter_disabled_apps">Disabled apps</string>
     <string name="installed_version">Installed Version</string>
     <string name="trackers">Trackers</string>
     <string name="components">Components</string>
     <string name="features">Features</string>
     <string name="whats_new">What\'s New</string>
     <string name="blocking_rules">Blocking rules</string>
-    <string name="cache">Cache</string>
     <string name="external_data">External data</string>
     <string name="internal_data">Internal data</string>
     <string name="data">Data</string>
@@ -459,13 +460,13 @@
         <item quantity="one">Could not block components for %1$d app</item>
         <item quantity="other">Could not block components for %1$d apps</item>
     </plurals>
+    <plurals name="alert_failed_to_unblock_components">
+        <item quantity="one">Could not unblock components for %1$d app</item>
+        <item quantity="other">Could not unblock components for %1$d apps</item>
+    </plurals>
     <plurals name="alert_failed_to_set_app_ops">
         <item quantity="one">Could not set app ops for %1$d app</item>
         <item quantity="other">Could not set app ops for %1$d apps</item>
-    </plurals>
-    <plurals name="alert_failed_to_enable">
-        <item quantity="one">Could not enable %1$d app</item>
-        <item quantity="other">Could not enable %1$d apps</item>
     </plurals>
     <plurals name="backup_exists_are_you_sure">
         <item quantity="one">Backup already exists. Are you sure?</item>
@@ -507,6 +508,7 @@
     <string name="run_in_termux">Run in Termux</string>
     <string name="website">Website</string>
     <string name="website_message" translatable="false">https://muntashirakon.github.io/AppManager</string>
+    <string name="discussions_site" translatable="false">https://github.com/MuntashirAkon/AppManager/issues</string>
     <string name="pref_remove_all_rules">Remove all rules</string>
     <string name="pref_remove_all_rules_msg">Permissions will be granted, app ops and components will return to their default values.</string>
     <string name="are_you_sure">Are you sure?</string>
@@ -530,7 +532,7 @@
     <string name="reinstall">Reinstall</string>
     <string name="unblock_trackers">Unblock trackers</string>
     <string name="package_installer">Package Installer</string>
-    <string name="install_in_progress">Install in progress</string>
+    <string name="install_in_progress">Installing…</string>
     <string name="installer_error_security">Could not access APK files</string>
     <string name="installer_error_session_create">Could not create an installer session</string>
     <string name="installer_error_session_write">Could not write to the installer session</string>
@@ -555,7 +557,7 @@
     <string name="abi_split_for_base_apk"><xliff:g id="split_name" example="arm64_v8a">%1$s</xliff:g> code for base APK</string>
     <string name="locale_split_for_feature"><xliff:g id="split_name" example="English">%1$s</xliff:g> locale for feature <xliff:g id="feature_name" example="Visualizer">%2$s</xliff:g></string>
     <string name="locale_split_for_base_apk"><xliff:g id="split_name" example="English">%1$s</xliff:g> locale for base APK</string>
-    <string name="empty" translatable="false"/>
+    <string name="empty" translatable="false" />
     <string name="_null" translatable="false">null</string>
     <string name="launch_mode_multiple">Multiple</string>
     <string name="launch_mode_single_instance">Single instance</string>
@@ -608,7 +610,6 @@
     <string name="process_state">State: <xliff:g id="process_state" example="Sleeping">%1$s</xliff:g></string>
     <string name="process_state_with_extra">State: <xliff:g id="process_state" example="Sleeping">%1$s</xliff:g> (<xliff:g id="state_extra" example="High priority">%2$s</xliff:g>)</string>
     <string name="downgrade">Downgrade</string>
-    <string name="downgrade_not_possible">Downgrade is not possible without root or ADB</string>
     <string name="input_backup_name">Backup name</string>
     <string name="input_backup_name_description">Backup name should not start with a digit nor should it contain any spaces. Leave it empty if you want to use current date-time.</string>
     <string name="ok">OK</string>
@@ -616,7 +617,6 @@
     <string name="systemless_app">Systemless App</string>
     <string name="open_pgp_provider">OpenPGP Provider</string>
     <string name="profiles">Profiles</string>
-    <string name="presets">Presets</string>
     <string name="no_profiles">No profiles</string>
     <string name="keystore">KeyStore</string>
     <string name="apply_now">Apply now…</string>
@@ -662,8 +662,6 @@
     <string name="critical_exts">Critical Extensions</string>
     <string name="non_critical_exts">Non-critical Extensions</string>
     <string name="usage_access_not_supported">Could not request usage access, as the corresponding settings page does not exist.</string>
-    <string name="packages">packages</string>
-    <string name="onboard">Onboard</string>
     <string name="do_you_want_to_uninstall_and_install">Do you want to uninstall and install the app again?</string>
     <string name="app_signing_signature_mismatch_for_system_apps">Could not install app because a system app with a different signature has this package name.</string>
     <string name="app_data_will_be_lost">The existing data will be lost.</string>
@@ -689,8 +687,6 @@
     <string name="new_profile">New profile</string>
     <string name="duplicate">Duplicate</string>
     <string name="failed_to_duplicate_profile">Could not duplicate profile</string>
-    <string name="pref_show_users_in_installer">Show users in installer</string>
-    <string name="pref_show_users_in_installer_msg">Display a list of users to select before installing an external app. Requires root or ADB.</string>
     <string name="select_user">Select user</string>
     <string name="encryption">Encryption</string>
     <string name="pref_encryption_msg">Encryption for backups.</string>
@@ -704,7 +700,6 @@
     <string name="allow_routine_ops">Allow routine ops</string>
     <string name="profile_state">Profile state</string>
     <string name="allow_routine_ops_msg">Allow the profile to be used in the routine operations</string>
-    <string name="profile_disable_msg">Disables or enables apps based on state</string>
     <string name="profile_force_stop_msg">Force-stops apps</string>
     <string name="profile_clear_cache_msg">Clears the app cache of apps</string>
     <string name="profile_clear_data_msg">Clears the data of apps</string>
@@ -741,6 +736,7 @@
     <string name="verified">Verified</string>
     <string name="not_verified">Not verified</string>
     <string name="source_stamp_verified">SourceStamp verified.</string>
+    <string name="source_stamp_verified_and_identified_to_be_from_source">SourceStamp verified and identified to be from <xliff:g id="source" example="Google Play">%1$s</xliff:g>.</string>
     <string name="splits">Splits</string>
     <string name="input_keystore_pass">Input KeyStore password</string>
     <string name="input_keystore_pass_description">Enter the App Manager KeyStore password. If you\'re seeing this for the first time, please use a password generator to generate a password and save it in a secure place before inserting it here.</string>
@@ -784,8 +780,6 @@
     <string name="vendor">Vendor</string>
     <string name="memory">Memory</string>
     <string name="battery_capacity">Capacity</string>
-    <string name="available">Available</string>
-    <string name="unavailable">Unavailable</string>
     <string name="languages">Languages</string>
     <string name="users">Users</string>
     <string name="cpu">CPU</string>
@@ -799,8 +793,8 @@
     <string name="backup_obb_media_description">Back up OBB and media folders.</string>
     <string name="backup_cache_description">Back up <b>cache</b>, <b>no_cache</b> and <b>no_backup</b> folders.</string>
     <string name="backup_extras">Extras</string>
-    <string name="backup_extras_description">Back up app permissions, battery saving and data usage options, MagiskHide status, SSAID, etc.</string>
-    <string name="backup_rules_description">Back up rules configured within App Manager.</string>
+    <string name="backup_extras_description">Back up app permissions, battery saving and data usage options, MagiskHide status, SSAID, etc. <font fgcolor="#ff0000">Depending on the permissions, not all extras can be restored.</font></string>
+    <string name="backup_rules_description">Back up rules configured within App Manager. <font fgcolor="#ff0000">Depending on the permissions, not all rules can be reapplied during restore.</font></string>
     <string name="backup_multiple_description">Create a separate <i>named</i> backup instead of the base backup.</string>
     <string name="backup_skip_signature_checks_description">Restore backups that either fail checksum verification or have different APK signatures than their prior backups.</string>
     <string name="patch_level">Patch level</string>
@@ -814,9 +808,7 @@
     <string name="scaling_factor">Scaling factor</string>
     <string name="refresh_rate">Refresh rate</string>
     <string name="window_size">Window size</string>
-    <string name="disable_magisk_hide">Disable MagiskHide?</string>
     <string name="failed_to_disable_magisk_hide">Could not disable MagiskHide</string>
-    <string name="enable_magisk_hide">Enable MagiskHide</string>
     <string name="failed_to_enable_magisk_hide">Could not enable MagiskHide</string>
     <string name="disable_background_run_description">Sets <i>Ignore</i> mode for the following app ops: <tt>RUN_IN_BACKGROUND</tt> (from Android 7.0) and <tt>RUN_ANY_IN_BACKGROUND</tt> (from Android 9).</string>
     <string name="pref_backup_restore_msg">Customise backup/restore.</string>
@@ -903,7 +895,6 @@
     <string name="invalid_rsa_key_size">Invalid key size for RSA encryption. Key size can be 1024, 2048 or 4096 bits.</string>
     <string name="use_default">Use default</string>
     <string name="key_not_set">Not set.</string>
-    <string name="default_key_used">Default key is used.</string>
     <string name="failed_to_load_key">Could not load the key.</string>
     <string name="input_key_password">Key password</string>
     <string name="common_name">Common name (CN)</string>
@@ -929,10 +920,10 @@
     <string name="signing_key">Signing key</string>
     <string name="expiry_date_cannot_be_empty">Expiry date cannot be empty.</string>
     <string name="pref_installer_msg">Configure the behaviours of the app installer.</string>
-    <plurals name="items_selected">
-        <item quantity="one"><xliff:g id="selection_no" example="20">%1$d</xliff:g> selected</item>
-        <item quantity="other"><xliff:g id="selection_no" example="20">%1$d</xliff:g> selected</item>
-    </plurals>
+    <string name="pref_import_backups">Import backups</string>
+    <string name="pref_import_backups_msg">Import backups from OAndBackup, Swift Backup (3.0–3.2) or Titanium Backup.</string>
+    <string name="import_from_oab">Import from OAndBackup</string>
+    <string name="import_from_tb">Import from Titanium Backup</string>
     <string name="log_viewer">Log Viewer</string>
     <string name="pref_log_viewer_msg">Configure how logs are displayed.</string>
     <string name="restart_log_viewer_to_see_changes">Restart log viewer window to see changes.</string>
@@ -952,11 +943,9 @@
         <item quantity="one">%d file will be deleted</item>
         <item quantity="other">%d files will be deleted</item>
     </plurals>
-    <string name="checkbox_never_show_partial_select_help">Don\'t show again</string>
     <string name="copy_to_clipboard">Copy to clipboard</string>
     <string name="delete_saved_log">Delete Saved Logs</string>
     <string name="dialog_compiling_log">Compiling log…</string>
-    <string name="dialog_partial_select_explanation">1. Select the <b>first</b> line.\n2. Then select the <b>last</b> line.</string>
     <string name="enter_filename">Enter filename</string>
     <string name="enter_good_filename">Please enter a valid filename.</string>
     <string name="filter_choice">Search by</string>
@@ -967,8 +956,7 @@
     <string name="log_recording_started">Log recording started.</string>
     <string name="log_saved">Log saved.</string>
     <string name="manage_saved_logs">Manage Saved Logs</string>
-    <string name="menu_title_partial_select">Save Partial</string>
-    <string name="no_saved_logs">No saved logs found.</string>
+    <string name="no_saved_logs">No saved logs.</string>
     <string name="notification_subtext">Touch to stop recording</string>
     <string name="notification_ticker">Log recording started</string>
     <string name="notification_title">Log recording in progress</string>
@@ -1000,7 +988,6 @@
     <string name="text_filter_ellipsis">Filter…</string>
     <string name="text_filter_text">Filter text</string>
     <string name="text_include_device_info">Include device information</string>
-    <string name="title_filters">Filters</string>
     <string name="pref_display_limit_hint" tools:ignore="PluralsCandidate">Please enter a valid number between %1$d and %2$d.</string>
     <string name="toast_invalid_level">Invalid level name: %s</string>
     <string name="toast_invalid_selection">Invalid selection. Please try again.</string>
@@ -1008,7 +995,6 @@
         <item quantity="one">Log too large, showing last %d line.</item>
         <item quantity="other">Log too large, showing last %d lines.</item>
     </plurals>
-    <string name="toast_started_select_partial">Select Partial mode enabled</string>
     <string name="unable_to_save_log">Unable to save log. Did you enter a valid filename?</string>
     <string name="widget_recording_in_progress">Recording…</string>
     <string name="widget_start_recording">Record\nLog</string>
@@ -1021,7 +1007,6 @@
     <string name="omit_sensitive_info_summary">Omit sensitive info like web urls, phone numbers or emails.</string>
     <string name="text_include_dmesg">Include kernel log</string>
     <string name="pref_include_dmesg" translatable="false">dmesg</string>
-    <string name="save_log_zip">Save zip</string>
     <string name="share_log">Share</string>
     <string name="view_logs">View logs</string>
     <string name="running_services">Running Services</string>
@@ -1043,23 +1028,29 @@
     <string name="failed">Failed</string>
     <string name="pref_rules_msg">Instant blocking, import/export/remove rules, etc.</string>
     <string name="saf">SAF</string>
-    <string name="pref_layout_orientation">Layout orientation</string>
+    <string name="pref_layout_direction">Layout direction</string>
     <string name="orientation_follow_locale">Follow locale</string>
     <string name="orientation_left_to_right">Left to right</string>
     <string name="orientation_right_to_left">Right to left</string>
+    <plurals name="alert_failed_to_import_backups">
+        <item quantity="one">Could not import %1$d backup</item>
+        <item quantity="other">Could not import %1$d backups</item>
+    </plurals>
     <string name="suspended">Suspended</string>
     <string name="hidden">Hidden</string>
     <string name="pref_display_changes">Display changes</string>
     <string name="pref_display_changes_msg">Display changes in version, trackers, components, permissions, signatures, SDK, etc. in a version controlled manner.</string>
     <string name="no_changes">No changes</string>
     <string name="netpolicy_reject_background_data">Reject background data</string>
+    <string name="netpolicy_reject_metered_background_data">Reject background data on metered networks</string>
+    <string name="netpolicy_reject_metered_data">Reject data on metered networks</string>
+    <string name="netpolicy_allow_metered_background_data">Allow background data on metered networks even when Data Saver is on</string>
     <string name="netpolicy_allow_background_data">Allow background data when Data Saver is on</string>
     <string name="netpolicy_reject_cellular_data">Reject cellular data</string>
     <string name="netpolicy_reject_vpn_data">Reject VPN data</string>
     <string name="netpolicy_reject_wifi_data">Reject Wi-Fi data</string>
     <string name="netpolicy_disable_network_access">Disable network access</string>
     <string name="wireless_debugging">Wireless debugging</string>
-    <string name="wireless_debugging_not_supported">Wireless debugging isn\'t supported in this platform.</string>
     <string name="adb_connect">Connect</string>
     <string name="port_number">Port</string>
     <string name="adb_connect_port_number_description">Port number is located under <b>IP address &amp; port</b> section
@@ -1067,4 +1058,454 @@
     <string name="port_number_empty">Port number is empty.</string>
     <string name="port_number_invalid">Invalid port number.</string>
     <string name="unknown_net_policy">Unknown netpolicy (%1$s - %2$X)</string>
+    <string name="failed_to_prevent_background_run">Could not prevent %1$s from running in the background</string>
+    <string name="help_app_ops_tab">Click on an item to <b>allow</b> or <b>ignore</b> it. Long click on an item to see other supported modes.</string>
+    <string name="help_permissions_tab">These permissions are defined by this app and cannot be revoked.</string>
+    <string name="help_uses_permissions_tab">Click on an item to <b>grant</b> or <b>revoke</b> it. Only <b>dangerous</b> and <b>development</b> permissions may be granted or revoked.</string>
+    <string name="minimum_version">Min version: %d</string>
+    <string name="added_to_queue">Added to queue</string>
+    <string name="pref_selected_users">Selected users</string>
+    <string name="pref_selected_users_msg">Restrict App Manager to work with the selected users only.</string>
+    <string name="permission_flags">Permission flags</string>
+    <string name="saved_filters">Saved filters</string>
+    <string name="error_with_details">Error: %s</string>
+    <string name="notice">Notice</string>
+    <string name="notice_saf">Unlike the volumes, the selected directory will be used to store all the files related to App Manager, including saved APKs and backups. Storage Access Framework (SAF) is very slow, therefore, you should only use this option when others cannot be used.</string>
+    <string name="backup_volume_dialog_description">Volumes with <tt>/tree</tt> prefix are folders selected using Storage Access Framework (SAF). Except these folders, the default directory for App Manager is a subfolder named <tt>AppManager</tt>.</string>
+    <string name="storage">Storage</string>
+    <string name="files">Files</string>
+    <string name="keystore_password_info">The following is the App Manager KeyStore password. Please store it in a secure place if you\'re going to back up/restore App Manager KeyStore. <b>This message will not be displayed again.</b></string>
+    <string name="keystore_pass_cannot_be_empty">KeyStore password cannot be empty.</string>
+    <string name="invalid_password">Invalid password, try again.</string>
+    <string name="adb_pair">Pair</string>
+    <string name="paired_successfully">Paired.</string>
+    <string name="identifier">Identifier</string>
+    <string name="set_package_name_first">Set package name first!</string>
+    <string name="paste">Paste</string>
+    <string name="user_root">Use root</string>
+    <string name="trim_caches_in_all_apps">Trim caches in all apps</string>
+    <string name="trim_caches_in_all_apps_description">Deletes cache files from all applications, including android system</string>
+    <string name="background">Background</string>
+    <string name="staging_apk_files">Staging…</string>
+    <string name="installer_app_installed">App installed</string>
+    <string name="next">Next</string>
+    <string name="pref_block_trackers_msg">Block tracking components after installing an app using App Manager.</string>
+    <string name="pref_always_on_background">Install in the background</string>
+    <string name="pref_always_on_background_msg">Always install apps in the background and display a notification when finished.</string>
+    <string name="type_uri_array">Array of URIs</string>
+    <string name="type_uri_array_list">List of URIs</string>
+    <string name="pref_thread_count">Parallel execution</string>
+    <string name="pref_thread_count_hint">The value must be between 0 to %1$d where 0 means <i>maximum number of operations at the given time</i>.</string>
+    <plurals name="pref_thread_count_msg">
+        <item quantity="one">Execute at most %1$d operation in parallel</item>
+        <item quantity="other">Execute at most %1$d operations in parallel</item>
+    </plurals>
+    <string name="pid">Process ID</string>
+    <string name="running_services_logcat_hint">Click on an item to open the log viewer with the corresponding process ID as the default filter.</string>
+    <string name="import_from_sb">Import from Swift Backup 3.0 – 3.2</string>
+    <string name="pref_import_backups_hint">Select a directory containing the backup files (Swift Backup/Titanium Backup) or directories (OAndBackup)</string>
+    <string name="java">Java</string>
+    <string name="smali">Smali</string>
+    <string name="accessibility_service_description">Generic accessibility service to carry out certain operations such as clearing cache in no-root mode.</string>
+    <string name="explore">Explore</string>
+    <string name="system_partition">Android root</string>
+    <string name="exit_confirmation">Exit confirmation</string>
+    <string name="extract">Extract</string>
+    <string name="replace">Replace</string>
+    <string name="rename">Rename</string>
+    <string name="intent_firewall_and_disable">IFW + disable</string>
+    <string name="intent_firewall">IFW</string>
+    <string name="pref_default_blocking_method">Default blocking method</string>
+    <string name="pref_default_blocking_method_description">Method to use by default in places where there is no option to select a blocking method.\n<b>Note:</b> “IFW” does not work with providers, “disable” is used instead.</string>
+    <string name="pref_intent_firewall_and_disable_description">Block components using Intent Firewall as well as disable them. Recommended method for root users.</string>
+    <string name="pref_intent_firewall_description">Block components using Intent Firewall only. Not recommended as some system apps can bypass firewalls.</string>
+    <string name="pref_disable_description">Disable components only. Not recommended for root users since the apps can bypass this. In ADB modes, the test-only apps can be disabled with this method.</string>
+    <string name="authenticating">Authenticating…</string>
+    <string name="search_type_contains">Contains</string>
+    <string name="search_type_prefix">Prefix</string>
+    <string name="search_type_suffix">Suffix</string>
+    <string name="search_type_regular_expressions">Regex</string>
+    <string name="toggle_internet">Use the Internet</string>
+    <string name="pref_toggle_internet_msg">Activate the Internet features in App Manager</string>
+    <string name="vt_checking">VirusTotal: Checking…</string>
+    <string name="vt_uploading">VirusTotal: Uploading…</string>
+    <string name="vt_queued">VirusTotal: Queued</string>
+    <string name="vt_failed">VirusTotal: Failed</string>
+    <string name="vt_success">VirusTotal: %1$d/%2$d</string>
+    <string name="vt_scan_date">Scan date: %1$s</string>
+    <string name="vt_permalink">Permanent link to VirusTotal</string>
+    <string name="vt_slowness_warning">Depending on the Internet speed and load on the server, this may take a while.</string>
+    <string name="vt_disclaimer">VirusTotal and its logos are a trademark of Chronicle LLC. Neither App Manager—the API client—nor its authors are responsible for any data you may send to VirusTotal.</string>
+    <string name="pref_vt_apikey">VirusTotal API Key</string>
+    <string name="pref_vt_apikey_description">An API key enables App Manager to upload APK files to VirusTotal as well as fetch reports. Sign up at https://virustotal.com to get an API key for free.</string>
+    <string name="pref_vt_apikey_summary">Enable scanning APK files via VirusTotal.</string>
+    <string name="uses_play_app_signing">Play App Signing</string>
+    <string name="uses_play_app_signing_description">This app contains certain markers that indicate that it <i>might</i> be using <a href="https://support.google.com/googleplay/android-developer/answer/9842756">Play App Signing</a>. With this scheme, the signing keys are stored in Google\'s servers, and Google is responsible for signing the app. Note that matching signing information is the only way to verify that the app has not been modified by any person other than the developer (and in this case, Google too).</string>
+    <string name="scan_in_vt">Scan in VirusTotal</string>
+    <string name="process_id">Process ID</string>
+    <string name="parent_process_id">Parent Process ID</string>
+    <string name="virtual_memory">Virtual Memory</string>
+    <string name="cpu_percent">%% CPU</string>
+    <string name="cpu_time">CPU Time</string>
+    <string name="priority">Priority</string>
+    <string name="threads">Thread Count</string>
+    <string name="state">Process State</string>
+    <string name="commandline_args">Commandline arguments</string>
+    <string name="swap">Swap</string>
+    <string name="memory_chart_info">● %1$s Applications ● %2$s Cached ● %3$s Buffers ● %4$s Free</string>
+    <string name="swap_chart_info">● %1$s Used ● %2$s Free</string>
+    <string name="failed_to_change_app_op_mode">Could not change the app op mode.</string>
+    <string name="failed_to_use_the_current_mode_of_operation">Unable to use the current mode of operation. Falling back to no-root mode for this session.</string>
+    <string name="warning_working_on_root_mode">Warning: Working on root instead of ADB mode.</string>
+    <string name="warning_working_on_system_mode">Warning: Working on system instead of ADB mode.</string>
+    <string name="magisk_denylist">Magisk DenyList</string>
+    <string name="failed_to_enable_magisk_deny_list">Could not enable Magisk DenyList</string>
+    <string name="failed_to_disable_magisk_deny_list">Could not disable Magisk DenyList</string>
+    <string name="mode_of_op_with_inferred_mode_of_op">%1$s (Inferred mode: %2$s)</string>
+    <string name="primary_abi">Primary ABI</string>
+    <string name="zygote_preload_name">Zygote preload name</string>
+    <string name="hidden_api_enforcement_policy">Hidden API enforcement policy</string>
+    <string name="hidden_api_enf_default_policy">Default (based on application type)</string>
+    <string name="hidden_api_enf_policy_none">None (full-access to the hidden API)</string>
+    <string name="hidden_api_enf_policy_warn">Warn (full-access to the hidden API but issues warnings)</string>
+    <string name="hidden_api_enf_policy_dark_grey_and_black">Enforce (dark-grey and black lists)</string>
+    <string name="hidden_api_enf_policy_black">Enforce (blacklists only)</string>
+    <string name="binary_32_bit">32 Bit</string>
+    <string name="binary_64_bit">64 Bit</string>
+    <string name="endianness_little_endian">Little endian</string>
+    <string name="endianness_big_endian">Big endian</string>
+    <string name="so_type_shared_library">Shared library</string>
+    <string name="so_type_executable">Executable</string>
+    <string name="file_modified_are_you_sure">The file was modified. Discard all your changes and exit?</string>
+    <string name="save_and_exit">Save and exit</string>
+    <string name="pref_saved_apk_name_format">Saved APK Name Format</string>
+    <string name="pref_saved_apk_name_format_msg">The format to be used for naming the APK files when you save them.</string>
+    <string name="auth_manager_description">To launch an Intent from an external app, it is necessary to supply an extra field called <tt>auth</tt>, and it must contain the following key:</string>
+    <string name="auth_manager_title">Authorization Manager</string>
+    <string name="regenerate_auth_key">Regenerate authorization key</string>
+    <string name="regenerate_auth_key_warning">Are you sure? All the third-party apps have to be reconfigured with the new authorization key.</string>
+    <string name="shortcut_icon">Shortcut Icon</string>
+    <string name="sort_by_installation_date">Installation date</string>
+    <string name="backup_volume_unavailable_warning">The selected backup volume is not currently available. If it is located in an external storage, please insert it, or change the backup volume.</string>
+    <string name="change_backup_volume">Change volume</string>
+    <string name="external">External</string>
+    <string name="internal">Internal</string>
+    <string name="tracker">Tracker</string>
+    <string name="input_ssaid_instruction">SSAID is a %1$d byte hexadecimal number i.e. a string of length %2$d containing 0 to 9 and a to f.</string>
+    <string name="screen_time">Screen Time</string>
+    <string name="open_in_new_window">New window</string>
+    <string name="type_string_set">Set of strings</string>
+    <string name="pref_vt_prompt_before_uploading">Display prompt before uploading a file.</string>
+    <string name="vt_confirm_uploading_file">The file was not found in the VirusTotal database. Do you want to upload it?</string>
+    <string name="vt_confirm_upload_and_scan">Yes, upload and scan</string>
+    <string name="log_stop_recording">Stop recording</string>
+    <string name="apk_checksums">APK Checksums</string>
+    <string name="item_select">Select</string>
+    <string name="app_explorer">App Explorer</string>
+    <string name="netpolicy_cannot_be_modified_for_core_apps">Net policy cannot be modified for Android core apps.</string>
+    <string name="open_developer_options_page">Open developer options page in Android settings</string>
+    <string name="pref_pure_black_theme">Pure black theme</string>
+    <string name="pref_pure_black_theme_msg">Use a completely black background when night mode is enabled.</string>
+    <string name="usage_times_opened">Times opened</string>
+    <string name="usage_last_used">Last used</string>
+    <string name="usage_mobile_data">Mobile data</string>
+    <string name="usage_wifi_data">Wi-Fi data</string>
+    <string name="frozen">Frozen</string>
+    <string name="freeze">Freeze</string>
+    <string name="unfreeze">Unfreeze</string>
+    <string name="backup_no_backups_present">No backups.</string>
+    <string name="restore_dots">Restore…</string>
+    <string name="backup_apps_cannot_be_restored">The following apps cannot be restored because they do not have a base backup:</string>
+    <string name="backup_apps_cannot_be_backed_up">The following apps are not installed and cannot be backed up:</string>
+    <string name="restart_device">Restart device</string>
+    <string name="import_backups_warning_delete_backups_after_import">Delete the backups after importing them to App Manager? Each backup is individually deleted after it is imported with success. Select <b>No</b> if unsure.</string>
+    <string name="troubleshooting">Troubleshooting</string>
+    <string name="pref_reload_apps">Reload apps</string>
+    <string name="pref_reload_apps_msg">Reload the list of apps stored in App Manager database in case of unexpected behaviour.</string>
+    <string name="changelog_type_new">New</string>
+    <string name="changelog_type_fix">Fix</string>
+    <string name="changelog_type_improve">Improve</string>
+    <string name="unsupported_split_apk">Unsupported</string>
+    <string name="view_changelog">Find out what\'s new in this release</string>
+    <string name="sort_by_total_size">Total size</string>
+    <string name="am_command"><tt>am</tt> command</string>
+    <string name="pref_sign_apk_error_signing_key_not_added">A valid signing key is required for signing an APK file.</string>
+    <string name="pref_sign_apk_no_signing_key">No signing key</string>
+    <string name="failed_to_freeze">Could not freeze <xliff:g id="app_name" example="App Manager">%1$s</xliff:g>.</string>
+    <string name="failed_to_unfreeze">Could not unfreeze <xliff:g id="app_name" example="App Manager">%1$s</xliff:g>.</string>
+    <string name="freeze_unfreeze">Freeze/unfreeze</string>
+    <string name="profile_freeze_msg">Freezes or unfreezes apps based on state</string>
+    <string name="pref_default_freezing_method">Default freezing method</string>
+    <string name="pref_default_freezing_method_description">Method to be used by default in places where there is no option to select a freezing method.</string>
+    <string name="suspend_app">Suspend</string>
+    <string name="hide_app">Hide</string>
+    <plurals name="alert_failed_to_freeze">
+        <item quantity="one">Could not freeze %1$d app</item>
+        <item quantity="other">Could not freeze %1$d apps</item>
+    </plurals>
+    <plurals name="alert_failed_to_unfreeze">
+        <item quantity="one">Could not unfreeze %1$d app</item>
+        <item quantity="other">Could not unfreeze %1$d apps</item>
+    </plurals>
+    <string name="suspend_app_description">This is the weakest freezing method. A suspended app may still appear in the launcher but will be grayed out and cannot be launched.</string>
+    <string name="disable_app_description">Recommended freezing method. It disables the app and along with all its components, but all the shortcuts will be lost.</string>
+    <string name="hide_app_description">This method is only recommended for day to day use. A hidden app appears as if it is uninstalled. But the app could reappear if it is reinstalled or updated.</string>
+    <string name="sort_by_frozen_app">Frozen first</string>
+    <string name="filter_frozen_apps">Frozen apps</string>
+    <string name="pref_appearance_description">Theme, orientation, features, etc.</string>
+    <string name="pref_privacy">Privacy</string>
+    <string name="pref_privacy_description">Screen lock, authorization, etc.</string>
+    <string name="user_manual">User manual</string>
+    <string name="get_help">Get help</string>
+    <string name="pref_advanced_pref">Users, APK name format, parallel execution, etc.</string>
+    <string name="pref_version_changelog">Version/Changelog</string>
+    <string name="file_creation_date">Created</string>
+    <string name="file_modification_date">Modified</string>
+    <string name="file_accessed_date">Accessed</string>
+    <string name="file_open_with">Open with</string>
+    <string name="file_change_open_with">Change open with</string>
+    <string name="file_shortcut_target_file">Target file</string>
+    <string name="file_properties">Properties</string>
+    <string name="file_cut">Cut</string>
+    <string name="fm_always_open_with">Always open</string>
+    <string name="fm_open_with_for_this_file_only">Only for this file</string>
+    <string name="file_open_as">Open as…</string>
+    <string name="file_open_with_custom_activity">Custom</string>
+    <string name="file_open_with_os_default_dialog">Open with OS-default dialog</string>
+    <string name="open_as_text">Text</string>
+    <string name="open_as_image">Image</string>
+    <string name="open_as_video">Video</string>
+    <string name="open_as_archive">Archive</string>
+    <string name="open_as_folder">Folder</string>
+    <string name="open_as_other">Other</string>
+    <string name="delete_filename">Delete %s</string>
+    <string name="confirm_file_deletion">Yes, delete</string>
+    <string name="on_unfreeze_open_application">Open app after unfreezing</string>
+    <string name="on_open_application_no_recents">Do not show launched app in Recents</string>
+    <string name="freeze_on_phone_locked">Automatically freeze app when the phone is locked</string>
+    <string name="tap_to_freeze_app">Tap to freeze</string>
+    <string name="waiting_for_the_phone_to_be_locked">Waiting for the phone to be locked…</string>
+    <string name="action_stop_service">Stop</string>
+    <string name="app_manager_build_expired">Update Required</string>
+    <string name="app_manager_build_expired_message">To ensure the safety of your device and data, the version of App Manager you\'re using has been retired. You have to update it to the latest version to continue to use it, or uninstall it if no update is available.</string>
+    <string name="app_manager_build_expiring_soon_warning">This version of App Manager will expire very soon. Please update it to the latest version.</string>
+    <string name="app_can_write_and_execute_in_same_place">The app violates <a href="https://en.wikipedia.org/wiki/W%5EX">W^X policy</a> and is capable of writing and executing in the same directory or in the same portion of memory. This allows the execution of arbitrary executables either by the modification of executables embedded within the app or by downloading them from the Internet. Unless this is the intended behaviour of the app (e.g. terminal emulators), it is recommended to find a newer version of the app that targets SDK 29 (Android 10) and later, or find alternatives.</string>
+    <string name="renamed_successfully">Renamed</string>
+    <string name="selinux_context">SELinux context</string>
+    <string name="unix_file_permissions">Mode</string>
+    <string name="file_group_id">Group (GID)</string>
+    <string name="file_owner_id">Owner (UID)</string>
+    <string name="calculating_file_size">Calculating…</string>
+    <string name="sort_by_filename">Name</string>
+    <string name="sort_by_last_modified">Last modified</string>
+    <string name="sort_by_file_size">File size</string>
+    <string name="sort_by_file_type">File type</string>
+    <string name="option_display_dot_files">Dot files</string>
+    <string name="option_display_folders_on_top">Folders on top</string>
+    <string name="export_app_list">Export app list</string>
+    <string name="export_app_list_select_format">Select format for exporting app list</string>
+    <string name="export_option_xml">XML</string>
+    <string name="export_option_markdown">Markdown</string>
+    <string name="funding_campaign_dialog_message">We\'re running a <b>funding campaign</b> for App Manager for a limited period. Visit <a href="https://opencollective.com/app-manager#category-ABOUT">opencollective.com/app-manager</a> to learn more about the campaign. This notice will not be displayed again, but you can find it in the Settings page during the entire campaign.</string>
+    <string name="funding_campaign_text">We\'re running a <b>funding campaign</b> for App Manager for a limited period. <a href="https://opencollective.com/app-manager#category-ABOUT">learn more…</a></string>
+    <string name="adb_incomplete_usb_debugging_title">Incomplete USB Debugging</string>
+    <string name="adb_incomplete_usb_debugging_message">It looks like USB Debugging is not configured properly. Please read <a href="https://muntashirakon.github.io/AppManager/#subsec:enable-usb-debugging">the documentation</a> for additional steps. If you already know the steps, please click “Open” to open the developer options, or click “Close” to continue to use no-root mode.</string>
+    <string name="sort_by_data_usage">Data usage</string>
+    <string name="filter_apps_with_keystore">With KeyStore</string>
+    <string name="filter_apps_with_saf">With SAF</string>
+    <string name="filter_apps_with_ssaid">With SSAID</string>
+    <string name="action_continue">Continue</string>
+    <string name="install_for_another_user">Install for…</string>
+    <string name="confirm_uninstallation">Confirm uninstallation</string>
+    <string name="grant_required_permission">Grant required permission</string>
+    <string name="grant_overlay_permission_message">Allow App Manager to display a floating window on top of all other windows</string>
+    <string name="grant_accessibility_permission_for_tracking_window_contents">Allow App Manager to utilise the accessibility feature to track the contents of the leading window.</string>
+    <string name="class_hierarchy">Hierarchy</string>
+    <string name="title_ui_tracker">UI Tracker</string>
+    <string name="title_terminal_emulator">Terminal</string>
+    <string name="title_labs_activity">Labs</string>
+    <string name="select_a_dex2oat_compiler_filter"><tt>dex2oat</tt> compiler filter</string>
+    <string name="optimize_option_compile_layouts">Compile layout resources</string>
+    <string name="optimize_option_clear_profile_data">Clear previous profile data</string>
+    <string name="optimize_option_check_profiles">Consider profile data during DEX optimization</string>
+    <string name="optimize_option_force_compilation">Force compilation even when not required</string>
+    <string name="optimize_option_force_dexopt">Immediately perform DEX optimization</string>
+    <string name="title_perform_runtime_optimization_to_apps">Perform runtime optimization</string>
+    <string name="action_run">Run</string>
+    <string name="summary_perform_runtime_optimization_to_apps">Optimize DEX and (in Android 10 and later) layouts to improve the performance of the applications.</string>
+    <string name="action_optimize_app">Optimize</string>
+    <string name="batch_ops_runtime_optimization">Runtime optimization</string>
+    <string name="app_info_tag_open_links">Open links</string>
+    <string name="title_domains_supported_by_the_app">Supported Domains</string>
+    <string name="pref_zip_align">Align APK files</string>
+    <string name="pref_zip_align_msg">Aligning an APK file reduces its memory usage as the files in the APK can be accessed directly without copying the data to RAM. This step is required if <tt>extractNativeLibs</tt> is set to <tt>true</tt>.</string>
+    <plurals name="alert_failed_to_optimize_apps">
+        <item quantity="one">Could not optimize %1$d app</item>
+        <item quantity="other">Could not optimize %1$d apps</item>
+    </plurals>
+    <string name="title_code_editor">Code Editor</string>
+    <string name="redo">Redo</string>
+    <string name="read_only_file">Read only file</string>
+    <string name="read_only_file_warning">The changes cannot be written into the file, possibly because it is located in a volume that App Manager has no permission to write to. Do you want to save it in a different place?</string>
+    <string name="line_separator">Line separator</string>
+    <plurals name="search_results">
+        <item quantity="one">%d result</item>
+        <item quantity="other">%d results</item>
+    </plurals>
+    <string name="replacement_text">Replacement</string>
+    <string name="action_replace_all">Replace All</string>
+    <string name="search_option_match_case">Match case</string>
+    <string name="search_option_whole_word">Whole word</string>
+    <string name="search_option_regex">Regex</string>
+    <string name="uninstall_app_again_message">The application was uninstalled without clearing data and signature. Do you want to completely uninstall it?</string>
+    <string name="uninstall_app">Uninstall %1$s</string>
+    <string name="debloat_list_type">List</string>
+    <string name="debloat_removal_type">Type</string>
+    <string name="system_app_put_back">Put back</string>
+    <string name="debloater_title">Debloater</string>
+    <string name="debloat_list_aosp">AOSP</string>
+    <string name="debloat_list_oem">OEM</string>
+    <string name="debloat_list_carrier">Carrier/ISP</string>
+    <string name="debloat_list_google">Google</string>
+    <string name="debloat_list_misc">Miscellany</string>
+    <string name="debloat_list_pending">Pending</string>
+    <string name="debloat_removal_safe">Safe</string>
+    <string name="debloat_removal_replace">Replace</string>
+    <string name="debloat_removal_caution">Caution</string>
+    <string name="static_shared_library">Static shared library</string>
+    <string name="empty_folder">Empty</string>
+    <plurals name="folder_count">
+        <item quantity="one">%d folder</item>
+        <item quantity="other">%d folders</item>
+    </plurals>
+    <plurals name="file_count">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
+    <string name="go_to_path">Go to…</string>
+    <string name="copy_this_path">Copy path</string>
+    <string name="title_audio_player">Audio Player</string>
+    <string name="filter_force_stopped_apps">Stopped apps</string>
+    <string name="installing_package">Installing %1$s…</string>
+    <string name="backing_up_app">Backing up %1$s…</string>
+    <string name="restoring_app">Restoring %1$s…</string>
+    <string name="pref_installer_force_dexopt_description">Perform DEX optimization immediately after installing the app without waiting for the system to do it when the system is idle.</string>
+    <string name="folder">Folder</string>
+    <string name="symbolic_link">Symbolic link</string>
+    <string name="create_new_symbolic_link">New symbolic link</string>
+    <string name="symbolic_link_not_supported">This folder does not support creating a symbolic link.</string>
+    <string name="create_new_folder">New folder</string>
+    <string name="create_new_file">New file</string>
+    <string name="enter_symbolic_link_name">Link name</string>
+    <string name="enter_target_path">Target path</string>
+    <string name="invalid_target_path">Invalid path</string>
+    <string name="copy_these_paths">Copy paths</string>
+    <string name="title_confirm_deletion">Confirm deletion</string>
+    <string name="conflict_detected_while_copying">Conflict detected</string>
+    <string name="conflict_detected_while_copying_message">An item named “%1$s” already exists in this location. Do you want to replace it?</string>
+    <string name="copy_keep_both_file">Keep both</string>
+    <string name="copied_successfully">Copied.</string>
+    <string name="moved_successfully">Moved</string>
+    <string name="failed_to_copy_specified_file">Could not copy “%1$s”.</string>
+    <string name="failed_to_delete_specified_file_after_copying">Could not delete “%1$s” after copying it, possibly due to not enough permission.</string>
+    <string name="title_change_selinux_context">Change SELinux context</string>
+    <string name="apply_recursively">Apply to enclosed files</string>
+    <string name="change_owner_uid">Change owner (UID)</string>
+    <string name="change_group_gid">Change group (GID)</string>
+    <string name="change_mode">Change mode</string>
+    <string name="pref_send_notifications_to_connected_devices">Send notifications to the connected devices</string>
+    <string name="pref_send_notification_to_connected_devices_msg">Set whether to send notifications to connected devices such as wearables.</string>
+    <string name="installer_options">Installer options</string>
+    <string name="debloat_removal_safe_short_description">Safe to remove</string>
+    <string name="debloat_removal_caution_short_description">Exercise caution</string>
+    <string name="debloat_removal_replace_short_description">Replace with alternative</string>
+    <string name="title_alternatives_to_bloatware">Alternatives</string>
+    <string name="browse_files">Browse</string>
+    <string name="pref_files_msg">Configure file manager.</string>
+    <string name="pref_files_display_in_launcher">Display “Files” in app drawer</string>
+    <string name="pref_files_remember_last_path">Remember last opened path and its position</string>
+    <string name="pref_files_remember_last_path_msg">When this option is enabled, opening a new window opens the last opened folder instead of the home folder.</string>
+    <string name="pref_set_home">Set home</string>
+    <string name="xposed_module_info">Xposed Module Info</string>
+    <string name="title_description">Description</string>
+    <string name="module_name">Module name</string>
+    <string name="app_manager_is_running">App Manager is running</string>
+    <string name="tap_to_open_notification_settings">Tap to hide</string>
+    <string name="app_manager_is_unlocked">App Manager is unlocked</string>
+    <string name="action_lock_app">Lock</string>
+    <string name="pref_enable_persistent_session">Run App Manager in the background</string>
+    <string name="pref_enable_persistent_session_msg">Running App Manager in the background reduces initialisation delay. Useful if you use App Manager frequently.</string>
+    <string name="pref_enable_auto_lock">Automatic lockdown</string>
+    <string name="pref_enable_auto_lock_msg">Lock App Manager when the device is locked.</string>
+    <string name="path_does_not_exist">“%1$s” does not exist</string>
+    <string name="path_not_a_folder">“%1$s” is not a folder</string>
+    <string name="scan_report_from_pithus">Pithus report</string>
+    <string name="action_checking">Checking…</string>
+    <string name="report_not_available">Not available</string>
+    <string name="profile_modified_are_you_sure">The profile was modified. Discard all your changes and exit?</string>
+    <string name="apply_profile">Apply profile “%1$s”</string>
+    <string name="choose_a_profile_state">Select a profile state</string>
+    <string name="profile_id">Profile ID</string>
+    <string name="copy_profile_id">Copy profile ID</string>
+    <string name="launch_activity_dialog_title">Launch Activity: Action Required</string>
+    <string name="launch_activity_dialog_message">App Manager is trying to launch the activity via <b>Search assistant</b> (usually Google Assistant), but it\'s unable to do so due to insufficient permission. To open the activity, please activate <b>Search assistant</b> manually (which is usually done by long clicking on the Home button). Click on the <b>Close</b> button after you\'ve finished launching the activity to revert back to the original assistant.</string>
+    <string name="finder_title">Finder</string>
+    <string name="select_filter">Select a filter</string>
+    <string name="size_in_bytes">Size (bytes)</string>
+    <string name="invalid_regex">Invalid regular expression!</string>
+    <string name="value_cannot_be_empty">Value cannot be empty!</string>
+    <string name="date">Date</string>
+    <string name="pref_use_vt">Use VirusTotal</string>
+    <string name="virus_total">VirusTotal</string>
+    <string name="pref_use_vt_no_internet">VirusTotal requires the Internet to operate which isn\'t enabled. Please enable <a href="app-manager://settings/privacy_prefs/toggle_internet">“Use the Internet”</a> first.</string>
+    <string name="pref_use_log_viewer">Use Log Viewer</string>
+    <string name="pref_installer">Use the installer</string>
+    <string name="pref_cat_general">General</string>
+    <string name="status_remote_server_active">Remote server is active</string>
+    <string name="status_remote_server_inactive">Remote server is inactive</string>
+    <string name="status_remote_services_active">Remote services are active</string>
+    <string name="status_remote_services_inactive">Remote services are inactive</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connecting_via_mode">Connecting via %s</string>
+    <string name="status_connected_via_mode">Connected via %s</string>
+    <string name="status_not_connected_via_mode">Could not connect via %s</string>
+    <string name="adb_pairing_instruction">Please navigate to the developer options to enable wireless debugging and generate a pairing code. Click <b>Manual</b> if you\'ve already opened the developer options.</string>
+    <string name="adb_pairing_searching_for_port">Searching…</string>
+    <string name="adb_pairing_stop_searching">Stop</string>
+    <string name="adb_pairing_input_pairing_code">Pairing code</string>
+    <string name="adb_pairing_pairing_code">Pairing code</string>
+    <string name="adb_pairing_found_pairing_service_with_port">Found a service with port %d</string>
+    <string name="adb_pairing_pairing_in_progress">Pairing…</string>
+    <string name="adb_pairing_retry_pairing">Retry</string>
+    <string name="mode_of_op_custom_command_title">Custom Command</string>
+    <string name="mode_of_op_custom_command">If you are unable to use any of the modes, you can run the following command in any supported shell to run App Manager in privileged mode:</string>
+    <string name="mode_of_op_alternative_custom_command">If you get a “permission denied” error with the above command, run the following command instead:</string>
+    <string name="sensors">Sensors</string>
+    <string name="tag_sensors_disabled">Sensors disabled</string>
+    <string name="pref_use_system_font">Use system font</string>
+    <string name="pref_use_system_font_msg">Use the system-default font instead of the material font. <font fgcolor="#ff0000">This is an experimental feature.</font></string>
+    <string name="actual_installer">Actual Installer</string>
+    <string name="apk_source">APK Source</string>
+    <string name="backup_cache">Cache</string>
+    <string name="activity_name">Activity Name</string>
+    <string name="available_memory">Available: %s</string>
+    <string name="action_manual">Manual</string>
+    <string name="vulkan_version">Vulkan version</string>
+    <string name="battery_technology">Technology</string>
+    <string name="battery_health">Health</string>
+    <string name="verified_boot">Verified boot</string>
+    <string name="android_verified_bootloader_version">AVB version</string>
+    <string name="op_history">History</string>
+    <string name="no_history">No history</string>
+    <string name="title_confirm_execution">Confirm execution</string>
+    <string name="clear_history">Clear history</string>
+    <string name="favorites">Favorites</string>
+    <string name="add_to_favorites">Add to Favorites</string>
+    <string name="item_remove">Remove</string>
+    <string name="item_edit">Edit</string>
+    <string name="remove_filename">Remove %s</string>
+    <string name="advanced_suspend_app">Advanced suspend</string>
+    <string name="advanced_suspend_app_description">It force-stops and suspends the app to ensure that the app is not running in the background. This method should be preferred over the regular <b>suspend</b> method.</string>
+    <string name="freeze_prefer_per_app_option">Prefer per app option</string>
+    <string name="remember_option_for_this_app">Remember for this app</string>
 </resources>

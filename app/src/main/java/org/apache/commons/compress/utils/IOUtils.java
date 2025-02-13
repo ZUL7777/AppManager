@@ -2,16 +2,19 @@
 
 package org.apache.commons.compress.utils;
 
-import android.os.RemoteException;
-import io.github.muntashirakon.io.ProxyInputStream;
-
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
 /**
  * Utility functions
- * @Immutable (has mutable data but it is write-only)
+ *
+ * @Immutable (has mutable data but it is write - only)
  */
 // Copyright 2008 Torsten Curdt
 public final class IOUtils {
@@ -107,25 +110,6 @@ public final class IOUtils {
             numToSkip -= read;
         }
         return available - numToSkip;
-    }
-
-    /**
-     * Reads as much from the file as possible to fill the given array.
-     *
-     * <p>This method may invoke read repeatedly to fill the array and
-     * only read less bytes than the length of the array if the end of
-     * the stream has been reached.</p>
-     *
-     * @param file file to read
-     * @param array buffer to fill
-     * @return the number of bytes actually read
-     * @throws IOException on error
-     * @since 1.20
-     */
-    public static int read(final File file, final byte[] array) throws IOException, RemoteException {
-        try (ProxyInputStream inputStream = new ProxyInputStream(file)) {
-            return readFully(inputStream, array, 0, array.length);
-        }
     }
 
     /**
@@ -240,19 +224,6 @@ public final class IOUtils {
                 c.close();
             } catch (final IOException ignored) { // NOPMD NOSONAR
             }
-        }
-    }
-
-    /**
-     * Copies the source file to the given output stream.
-     * @param sourceFile The file to read.
-     * @param outputStream The output stream to write.
-     * @throws IOException if an I/O error occurs when reading or writing.
-     * @since 1.21
-     */
-    public static void copy(final File sourceFile, final OutputStream outputStream) throws IOException, RemoteException {
-        try (ProxyInputStream fis = new ProxyInputStream(sourceFile)) {
-            io.github.muntashirakon.AppManager.utils.IOUtils.copy(fis, outputStream);
         }
     }
 }

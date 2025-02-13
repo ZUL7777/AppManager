@@ -2,131 +2,138 @@
 
 package io.github.muntashirakon.AppManager.adb;
 
-import android.annotation.SuppressLint;
+import android.Manifest;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
+import android.net.Uri;
 import android.os.Build;
+import android.os.SystemClock;
+import android.os.SystemProperties;
+import android.provider.Settings;
+import android.provider.SettingsHidden;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.annotation.WorkerThread;
+import androidx.core.util.Pair;
 
-import java.net.Socket;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.Principal;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509ExtendedTrustManager;
-
-import io.github.muntashirakon.AppManager.crypto.ks.KeyPair;
+import io.github.muntashirakon.AppManager.runner.Runner;
+import io.github.muntashirakon.AppManager.self.SelfPermissions;
+import io.github.muntashirakon.AppManager.servermanager.ServerConfig;
+import io.github.muntashirakon.adb.android.AdbMdns;
 
 public class AdbUtils {
-    public static boolean isAdbAvailable(String host, int port) {
-        try (AdbConnection ignored = AdbConnectionManager.connect(host, port)) {
+    @WorkerThread
+    @NonNull
+    public static Pair<String, Integer> getLatestAdbDaemon(@NonNull Context context, long timeout, @NonNull TimeUnit unit)
+            throws InterruptedException, IOException {
+        if (!isAdbdRunning()) {
+            throw new IOException("ADB daemon not running.");
+        }
+        AtomicInteger atomicPort = new AtomicInteger(-1);
+        AtomicReference<String> atomicHostAddress = new AtomicReference<>(null);
+        CountDownLatch resolveHostAndPort = new CountDownLatch(1);
+
+        AdbMdns adbMdnsTcp = new AdbMdns(context, AdbMdns.SERVICE_TYPE_ADB, (hostAddress, port) -> {
+            if (hostAddress != null) {
+                atomicHostAddress.set(hostAddress.getHostAddress());
+                atomicPort.set(port);
+            }
+            resolveHostAndPort.countDown();
+        });
+        adbMdnsTcp.start();
+
+        AdbMdns adbMdnsTls;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            adbMdnsTls = new AdbMdns(context, AdbMdns.SERVICE_TYPE_TLS_CONNECT, (hostAddress, port) -> {
+                if (hostAddress != null) {
+                    atomicHostAddress.set(hostAddress.getHostAddress());
+                    atomicPort.set(port);
+                }
+                resolveHostAndPort.countDown();
+            });
+            adbMdnsTls.start();
+        } else adbMdnsTls = null;
+
+        try {
+            if (!resolveHostAndPort.await(timeout, unit)) {
+                throw new InterruptedException("Timed out while trying to find a valid host address and port");
+            }
+        } finally {
+            adbMdnsTcp.stop();
+            if (adbMdnsTls != null) {
+                adbMdnsTls.stop();
+            }
+        }
+
+        String host = atomicHostAddress.get();
+        int port = atomicPort.get();
+        if (host == null || port == -1) {
+            throw new IOException("Could not find any valid host address or port");
+        }
+        return new Pair<>(host, port);
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    public static boolean enableWirelessDebugging(@NonNull Context context) {
+        ContentResolver resolver = context.getContentResolver();
+        boolean wirelessDebuggingEnabled = Settings.Global.getInt(resolver, SettingsHidden.Global.ADB_WIFI_ENABLED, 0) != 0;
+        if (wirelessDebuggingEnabled && isAdbdRunning()) {
             return true;
-        } catch (Exception e) {
+        }
+        if (!SelfPermissions.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)) {
+            // No permission
             return false;
         }
+        try {
+            if (Settings.Global.getInt(resolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 0) {
+                ContentValues contentValues = new ContentValues(2);
+                contentValues.put("name", Settings.Global.DEVELOPMENT_SETTINGS_ENABLED);
+                contentValues.put("value", 1);
+                resolver.insert(Uri.parse("content://settings/global"), contentValues);
+            }
+            if (!wirelessDebuggingEnabled) {
+                ContentValues contentValues = new ContentValues(2);
+                contentValues.put("name", SettingsHidden.Global.ADB_WIFI_ENABLED);
+                contentValues.put("value", 1);
+                resolver.insert(Uri.parse("content://settings/global"), contentValues);
+            }
+            // Try at most 3 times to figure out if something has altered
+            for (int i = 0; i < 5; ++i) {
+                if (isAdbdRunning()) {
+                    return true;
+                }
+                SystemClock.sleep(500);
+            }
+        } catch (Throwable th) {
+            th.printStackTrace();
+        }
+        return false;
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    @NonNull
-    public static SSLContext getSslContext(KeyPair keyPair) throws NoSuchAlgorithmException, KeyManagementException {
-        SSLContext sslContext = SSLContext.getInstance("TLSv1.3");
-        sslContext.init(new KeyManager[]{getKeyManager(keyPair)}, new TrustManager[]{getTrustManager()}, new SecureRandom());
-        return sslContext;
+    public static boolean isAdbdRunning() {
+        // Default is set to “running” to avoid other issues
+        return "running".equals(SystemProperties.get("init.svc.adbd", "running"));
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    @NonNull
-    private static KeyManager getKeyManager(KeyPair keyPair) {
-        return new X509ExtendedKeyManager() {
-            private final String alias = "key";
-
-            @Override
-            public String[] getClientAliases(String keyType, Principal[] issuers) {
-                return null;
-            }
-
-            @Override
-            public String chooseClientAlias(String[] keyTypes, Principal[] issuers, Socket socket) {
-                for (String keyType : keyTypes) {
-                    if (keyType.equals("RSA")) return alias;
-                }
-                return null;
-            }
-
-            @Override
-            public String[] getServerAliases(String keyType, Principal[] issuers) {
-                return null;
-            }
-
-            @Override
-            public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
-                return null;
-            }
-
-            @Override
-            public X509Certificate[] getCertificateChain(String alias) {
-                if (this.alias.equals(alias)) {
-                    return new X509Certificate[]{(X509Certificate) keyPair.getCertificate()};
-                }
-                return null;
-            }
-
-            @Override
-            public PrivateKey getPrivateKey(String alias) {
-                if (this.alias.equals(alias)) {
-                    return keyPair.getPrivateKey();
-                }
-                return null;
-            }
-        };
+    public static int getAdbPortOrDefault() {
+        return SystemProperties.getInt("service.adb.tcp.port", ServerConfig.DEFAULT_ADB_PORT);
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    @NonNull
-    private static TrustManager getTrustManager() {
-        return new X509ExtendedTrustManager() {
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) {
-            }
+    public static boolean startAdb(int port) {
+        return Runner.runCommand(new String[]{"setprop", "service.adb.tcp.port", String.valueOf(port)}).isSuccessful()
+                && Runner.runCommand(new String[]{"setprop", "ctl.restart", "adbd"}).isSuccessful();
+    }
 
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) {
-            }
-
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
-            }
-
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
-            }
-
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkClientTrusted(X509Certificate[] chain, String authType) {
-            }
-
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkServerTrusted(X509Certificate[] chain, String authType) {
-            }
-
-            @Override
-            public X509Certificate[] getAcceptedIssuers() {
-                return new X509Certificate[0];
-            }
-        };
+    public static boolean stopAdb() {
+        return Runner.runCommand(new String[]{"setprop", "service.adb.tcp.port", "-1"}).isSuccessful()
+                && Runner.runCommand(new String[]{"setprop", "ctl.restart", "adbd"}).isSuccessful();
     }
 }

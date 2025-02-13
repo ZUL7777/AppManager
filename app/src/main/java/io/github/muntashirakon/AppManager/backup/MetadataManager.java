@@ -2,12 +2,17 @@
 
 package io.github.muntashirakon.AppManager.backup;
 
+import static io.github.muntashirakon.AppManager.utils.UIUtils.getSecondaryText;
+import static io.github.muntashirakon.AppManager.utils.UIUtils.getSmallerText;
+import static io.github.muntashirakon.AppManager.utils.UIUtils.getTitleText;
+
+import android.annotation.UserIdInt;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.os.RemoteException;
+import android.os.UserHandleHidden;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.text.format.Formatter;
@@ -22,45 +27,43 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 import aosp.libcore.util.HexEncoding;
-import io.github.muntashirakon.AppManager.AppManager;
 import io.github.muntashirakon.AppManager.BuildConfig;
 import io.github.muntashirakon.AppManager.R;
 import io.github.muntashirakon.AppManager.apk.ApkFile;
-import io.github.muntashirakon.AppManager.logs.Log;
+import io.github.muntashirakon.AppManager.apk.ApkSource;
+import io.github.muntashirakon.AppManager.compat.PackageManagerCompat;
 import io.github.muntashirakon.AppManager.misc.VMRuntime;
 import io.github.muntashirakon.AppManager.rules.compontents.ComponentsBlocker;
-import io.github.muntashirakon.AppManager.servermanager.PackageManagerCompat;
-import io.github.muntashirakon.AppManager.users.Users;
-import io.github.muntashirakon.AppManager.utils.AppPref;
+import io.github.muntashirakon.AppManager.settings.Prefs;
 import io.github.muntashirakon.AppManager.utils.ArrayUtils;
+import io.github.muntashirakon.AppManager.utils.ContextUtils;
 import io.github.muntashirakon.AppManager.utils.DateUtils;
 import io.github.muntashirakon.AppManager.utils.DigestUtils;
-import io.github.muntashirakon.AppManager.utils.IOUtils;
 import io.github.muntashirakon.AppManager.utils.JSONUtils;
 import io.github.muntashirakon.AppManager.utils.KeyStoreUtils;
-import io.github.muntashirakon.AppManager.utils.PackageUtils;
+import io.github.muntashirakon.AppManager.utils.LangUtils;
 import io.github.muntashirakon.AppManager.utils.TarUtils;
-import io.github.muntashirakon.io.ProxyFile;
-import io.github.muntashirakon.io.ProxyOutputStream;
-
-import static io.github.muntashirakon.AppManager.utils.UIUtils.getSecondaryText;
-import static io.github.muntashirakon.AppManager.utils.UIUtils.getSmallerText;
-import static io.github.muntashirakon.AppManager.utils.UIUtils.getTitleText;
+import io.github.muntashirakon.compat.ObjectsCompat;
+import io.github.muntashirakon.io.Path;
+import io.github.muntashirakon.io.Paths;
+import io.github.muntashirakon.util.LocalizedString;
 
 public final class MetadataManager {
+    public static final String TAG = MetadataManager.class.getSimpleName();
+
     public static final String META_FILE = "meta_v2.am.json";
-    public static final String[] TAR_TYPES = new String[]{TarUtils.TAR_GZIP, TarUtils.TAR_BZIP2};
+    public static final String[] TAR_TYPES = new String[]{TarUtils.TAR_GZIP, TarUtils.TAR_BZIP2, TarUtils.TAR_ZSTD};
+    public static final String[] TAR_TYPES_READABLE = new String[]{"GZip", "BZip2", "Zstandard"};
 
     // For an extended documentation, see https://github.com/MuntashirAkon/AppManager/issues/30
     // All the attributes must be non-null
-    public static class Metadata {
+    public static class Metadata implements LocalizedString {
         public String backupName;  // This isn't part of the json file and for internal use only
-        public File backupPath;  // This isn't part of the json file and for internal use only
+        public BackupFiles.BackupFile backupFile; // This isn't part of the json file and for internal use only
 
         public String label;  // label
         public String packageName;  // package_name
@@ -79,7 +82,16 @@ public final class MetadataManager {
         public byte[] iv;  // iv
         public byte[] aes;  // aes (encrypted using RSA, for RSA only)
         public String keyIds;  // key_ids
-        public int version = 3;  // version
+        /**
+         * Metadata version.
+         * <ul>
+         *     <li>{@code 1} - Alpha version, no longer supported</li>
+         *     <li>{@code 2} - Beta version (v2.5.2x), permissions aren't preserved (special action needed)</li>
+         *     <li>{@code 3} - From v2.6.x to v3.0.2 and v3.1.0-alpha01, permissions are preserved, AES GCM MAC size is 32 bits</li>
+         *     <li>{@code 4} - Since v3.0.3 and v3.1.0-alpha02, AES GCM MAC size is 128 bits</li>
+         * </ul>
+         */
+        public int version = 4;  // version
         public String apkName;  // apk_name
         public String instructionSet = VMRuntime.getInstructionSet(Build.SUPPORTED_ABIS[0]);  // instruction_set
         public BackupFlags flags;  // flags
@@ -89,31 +101,91 @@ public final class MetadataManager {
         public boolean keyStore;  // key_store
         public String installer;  // installer
 
-        public long getBackupSize() {
-            if (backupPath == null) return 0L;
-            return IOUtils.fileSize(backupPath);
+        public Metadata() {
         }
 
+        public Metadata(@NonNull Metadata metadata) {
+            backupName = metadata.backupName;
+            backupFile = metadata.backupFile;
+
+            label = metadata.label;
+            packageName = metadata.packageName;
+            versionName = metadata.versionName;
+            versionCode = metadata.versionCode;
+            if (metadata.dataDirs != null) {
+                dataDirs = metadata.dataDirs.clone();
+            }
+            isSystem = metadata.isSystem;
+            isSplitApk = metadata.isSplitApk;
+            if (metadata.splitConfigs != null) {
+                splitConfigs = metadata.splitConfigs.clone();
+            }
+            hasRules = metadata.hasRules;
+            backupTime = metadata.backupTime;
+            checksumAlgo = metadata.checksumAlgo;
+            crypto = metadata.crypto;
+            if (metadata.iv != null) {
+                iv = metadata.iv.clone();
+            }
+            if (metadata.aes != null) {
+                aes = metadata.aes.clone();
+            }
+            keyIds = metadata.keyIds;
+            version = metadata.version;
+            apkName = metadata.apkName;
+            instructionSet = metadata.instructionSet;
+            flags = new BackupFlags(metadata.flags.getFlags());
+            userHandle = metadata.userHandle;
+            tarType = metadata.tarType;
+            keyStore = metadata.keyStore;
+            installer = metadata.installer;
+        }
+
+        public long getBackupSize() {
+            if (backupFile == null) return 0L;
+            return Paths.size(backupFile.getBackupPath());
+        }
+
+        public boolean isBaseBackup() {
+            return String.valueOf(UserHandleHidden.myUserId()).equals(backupName);
+        }
+
+        public boolean isFrozen() {
+            return backupFile != null && backupFile.isFrozen();
+        }
+
+        @Override
+        @NonNull
         @WorkerThread
-        public CharSequence toLocalizedString(Context context) {
+        public CharSequence toLocalizedString(@NonNull Context context) {
             String shortName = BackupUtils.getShortBackupName(backupName);
             CharSequence titleText = shortName == null ? context.getText(R.string.base_backup) : shortName;
 
-            StringBuilder subtitleText = new StringBuilder(DateUtils.formatDateTime(backupTime)).append(", ")
-                    .append(flags.toLocalisedString(context)).append(", ");
-            subtitleText.append(context.getString(R.string.version)).append(": ").append(versionName)
-                    .append(", ").append(context.getString(R.string.user_id)).append(": ").append(userHandle);
+            StringBuilder subtitleText = new StringBuilder()
+                    .append(DateUtils.formatDateTime(context, backupTime))
+                    .append(", ")
+                    .append(flags.toLocalisedString(context))
+                    .append(", ")
+                    .append(context.getString(R.string.version)).append(LangUtils.getSeparatorString()).append(versionName)
+                    .append(", ")
+                    .append(context.getString(R.string.user_id)).append(LangUtils.getSeparatorString()).append(userHandle);
             if (crypto.equals(CryptoUtils.MODE_NO_ENCRYPTION)) {
                 subtitleText.append(", ").append(context.getString(R.string.no_encryption));
             } else {
                 subtitleText.append(", ").append(context.getString(R.string.pgp_aes_rsa_encrypted,
                         crypto.toUpperCase(Locale.ROOT)));
             }
-            subtitleText.append(", ").append(context.getString(R.string.gz_bz2_compressed,
-                    tarType.equals(TarUtils.TAR_GZIP) ? "GZip" : "BZip2"));
-            if (keyStore) subtitleText.append(", ").append(context.getString(R.string.keystore));
-            subtitleText.append(", ").append(context.getString(R.string.size)).append(": ").append(Formatter
-                    .formatFileSize(context, getBackupSize()));
+            subtitleText.append(", ").append(context.getString(R.string.gz_bz2_compressed, getReadableTarType(tarType)));
+            if (keyStore) {
+                subtitleText.append(", ").append(context.getString(R.string.keystore));
+            }
+            subtitleText.append(", ")
+                    .append(context.getString(R.string.size)).append(LangUtils.getSeparatorString()).append(Formatter
+                            .formatFileSize(context, getBackupSize()));
+
+            if (isFrozen()) {
+                subtitleText.append(", ").append(context.getText(R.string.frozen));
+            }
 
             return new SpannableStringBuilder(getTitleText(context, titleText)).append("\n")
                     .append(getSmallerText(getSecondaryText(context, subtitleText)));
@@ -125,101 +197,85 @@ public final class MetadataManager {
         return new MetadataManager();
     }
 
-    public static boolean hasAnyMetadata(String packageName) {
-        for (File file : getBackupFiles(packageName)) {
-            if (new ProxyFile(file, META_FILE).exists()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static boolean hasBaseMetadata(String packageName) {
-        File backupPath = new File(BackupFiles.getPackagePath(packageName),
-                String.valueOf(Users.getCurrentUserHandle()));
-        return new ProxyFile(backupPath, META_FILE).exists();
+    @WorkerThread
+    @NonNull
+    public static Metadata getMetadata(@NonNull Path backupPath) throws IOException {
+        MetadataManager metadataManager = MetadataManager.getNewInstance();
+        metadataManager.readMetadata(new BackupFiles.BackupFile(backupPath, false));
+        return metadataManager.getMetadata();
     }
 
     @WorkerThread
     @NonNull
-    public static Metadata[] getMetadata(String packageName) {
-        File[] backupFiles = getBackupFiles(packageName);
-        List<Metadata> metadataList = new ArrayList<>(backupFiles.length);
-        for (File backupFile : backupFiles) {
-            try {
-                MetadataManager metadataManager = MetadataManager.getNewInstance();
-                metadataManager.readMetadata(new BackupFiles.BackupFile((ProxyFile) backupFile, false));
-                metadataList.add(metadataManager.getMetadata());
-            } catch (JSONException e) {
-                Log.e("MetadataManager", e.getClass().getName() + ": " + e.getMessage());
-            }
-        }
-        return metadataList.toArray(new Metadata[0]);
+    public static Metadata getMetadata(@NonNull BackupFiles.BackupFile backupFile) throws IOException {
+        MetadataManager metadataManager = MetadataManager.getNewInstance();
+        metadataManager.readMetadata(backupFile);
+        return metadataManager.getMetadata();
     }
 
-    @NonNull
-    private static File[] getBackupFiles(String packageName) {
-        File[] backupFiles = BackupFiles.getPackagePath(packageName).listFiles(pathname -> new ProxyFile(pathname).isDirectory());
-        return ArrayUtils.defeatNullable(backupFiles);
-    }
-
-    private Metadata metadata;
-    private final AppManager appManager;
+    private Metadata mMetadata;
+    private final Context mContext;
 
     private MetadataManager() {
-        this.appManager = AppManager.getInstance();
+        mContext = ContextUtils.getContext();
     }
 
     public Metadata getMetadata() {
-        return metadata;
+        return mMetadata;
     }
 
     public void setMetadata(Metadata metadata) {
-        this.metadata = metadata;
+        this.mMetadata = metadata;
     }
 
     @WorkerThread
-    synchronized public void readMetadata(@NonNull BackupFiles.BackupFile backupFile)
-            throws JSONException {
-        String metadata = IOUtils.getFileContent(backupFile.getMetadataFile());
-        if (TextUtils.isEmpty(metadata)) throw new JSONException("Empty JSON string");
-        JSONObject rootObject = new JSONObject(metadata);
-        this.metadata = new Metadata();
-        this.metadata.backupPath = backupFile.getBackupPath();
-        this.metadata.backupName = this.metadata.backupPath.getName();
-        this.metadata.label = rootObject.getString("label");
-        this.metadata.packageName = rootObject.getString("package_name");
-        this.metadata.versionName = rootObject.getString("version_name");
-        this.metadata.versionCode = rootObject.getLong("version_code");
-        this.metadata.dataDirs = JSONUtils.getArray(String.class, rootObject.getJSONArray("data_dirs"));
-        this.metadata.isSystem = rootObject.getBoolean("is_system");
-        this.metadata.isSplitApk = rootObject.getBoolean("is_split_apk");
-        this.metadata.splitConfigs = JSONUtils.getArray(String.class, rootObject.getJSONArray("split_configs"));
-        this.metadata.hasRules = rootObject.getBoolean("has_rules");
-        this.metadata.backupTime = rootObject.getLong("backup_time");
-        this.metadata.checksumAlgo = rootObject.getString("checksum_algo");
-        this.metadata.crypto = rootObject.getString("crypto");
-        readCrypto(rootObject);
-        this.metadata.version = rootObject.getInt("version");
-        this.metadata.apkName = rootObject.getString("apk_name");
-        this.metadata.instructionSet = rootObject.getString("instruction_set");
-        this.metadata.flags = new BackupFlags(rootObject.getInt("flags"));
-        this.metadata.userHandle = rootObject.getInt("user_handle");
-        this.metadata.tarType = rootObject.getString("tar_type");
-        this.metadata.keyStore = rootObject.getBoolean("key_store");
-        this.metadata.installer = JSONUtils.getString(rootObject, "installer", BuildConfig.APPLICATION_ID);
+    synchronized public void readMetadata(@NonNull BackupFiles.BackupFile backupFile) throws IOException {
+        String metadata = backupFile.getMetadataFile().getContentAsString();
+        if (TextUtils.isEmpty(metadata)) {
+            throw new IOException("Empty JSON string for path " + backupFile.getBackupPath());
+        }
+        try {
+            JSONObject rootObject = new JSONObject(metadata);
+            mMetadata = new Metadata();
+            mMetadata.backupFile = backupFile;
+            mMetadata.backupName = backupFile.backupName;
+            mMetadata.label = rootObject.getString("label");
+            mMetadata.packageName = rootObject.getString("package_name");
+            mMetadata.versionName = rootObject.getString("version_name");
+            mMetadata.versionCode = rootObject.getLong("version_code");
+            mMetadata.dataDirs = JSONUtils.getArray(String.class, rootObject.getJSONArray("data_dirs"));
+            mMetadata.isSystem = rootObject.getBoolean("is_system");
+            mMetadata.isSplitApk = rootObject.getBoolean("is_split_apk");
+            mMetadata.splitConfigs = JSONUtils.getArray(String.class, rootObject.getJSONArray("split_configs"));
+            mMetadata.hasRules = rootObject.getBoolean("has_rules");
+            mMetadata.backupTime = rootObject.getLong("backup_time");
+            mMetadata.checksumAlgo = rootObject.getString("checksum_algo");
+            mMetadata.crypto = rootObject.getString("crypto");
+            readCrypto(rootObject);
+            mMetadata.version = rootObject.getInt("version");
+            mMetadata.apkName = rootObject.getString("apk_name");
+            mMetadata.instructionSet = rootObject.getString("instruction_set");
+            mMetadata.flags = new BackupFlags(rootObject.getInt("flags"));
+            mMetadata.userHandle = rootObject.getInt("user_handle");
+            mMetadata.tarType = rootObject.getString("tar_type");
+            mMetadata.keyStore = rootObject.getBoolean("key_store");
+            mMetadata.installer = JSONUtils.getString(rootObject, "installer", BuildConfig.APPLICATION_ID);
+        } catch (JSONException e) {
+            throw new IOException(e.getMessage() + " for path " + backupFile.getBackupPath());
+        }
     }
 
     private void readCrypto(JSONObject rootObj) throws JSONException {
-        switch (metadata.crypto) {
+        switch (mMetadata.crypto) {
             case CryptoUtils.MODE_OPEN_PGP:
-                this.metadata.keyIds = rootObj.getString("key_ids");
+                mMetadata.keyIds = rootObj.getString("key_ids");
                 break;
             case CryptoUtils.MODE_RSA:
-                this.metadata.aes = HexEncoding.decode(rootObj.getString("aes"));
+            case CryptoUtils.MODE_ECC:
+                mMetadata.aes = HexEncoding.decode(rootObj.getString("aes"));
                 // Deliberate fallthrough
             case CryptoUtils.MODE_AES:
-                this.metadata.iv = HexEncoding.decode(rootObj.getString("iv"));
+                mMetadata.iv = HexEncoding.decode(rootObj.getString("iv"));
                 break;
             case CryptoUtils.MODE_NO_ENCRYPTION:
             default:
@@ -227,97 +283,100 @@ public final class MetadataManager {
     }
 
     @WorkerThread
-    synchronized public void writeMetadata(@NonNull BackupFiles.BackupFile backupFile)
-            throws IOException, JSONException, RemoteException {
-        if (metadata == null) throw new RuntimeException("Metadata is not set.");
-        File metadataFile = backupFile.getMetadataFile();
-        try (OutputStream outputStream = new ProxyOutputStream(metadataFile)) {
+    synchronized public void writeMetadata(@NonNull BackupFiles.BackupFile backupFile) throws IOException {
+        if (mMetadata == null) {
+            throw new RuntimeException("Metadata not set for path " + backupFile.getBackupPath());
+        }
+        Path metadataFile = backupFile.getMetadataFile();
+        try (OutputStream outputStream = metadataFile.openOutputStream()) {
             JSONObject rootObject = new JSONObject();
-            rootObject.put("label", metadata.label);
-            rootObject.put("package_name", metadata.packageName);
-            rootObject.put("version_name", metadata.versionName);
-            rootObject.put("version_code", metadata.versionCode);
-            rootObject.put("data_dirs", JSONUtils.getJSONArray(metadata.dataDirs));
-            rootObject.put("is_system", metadata.isSystem);
-            rootObject.put("is_split_apk", metadata.isSplitApk);
-            rootObject.put("split_configs", JSONUtils.getJSONArray(metadata.splitConfigs));
-            rootObject.put("has_rules", metadata.hasRules);
-            rootObject.put("backup_time", metadata.backupTime);
-            rootObject.put("checksum_algo", metadata.checksumAlgo);
-            rootObject.put("crypto", metadata.crypto);
-            rootObject.put("key_ids", metadata.keyIds);
-            rootObject.put("iv", metadata.iv == null ? null : HexEncoding.encodeToString(metadata.iv));
-            rootObject.put("aes", metadata.aes == null ? null : HexEncoding.encodeToString(metadata.aes));
-            rootObject.put("version", metadata.version);
-            rootObject.put("apk_name", metadata.apkName);
-            rootObject.put("instruction_set", metadata.instructionSet);
-            rootObject.put("flags", metadata.flags.getFlags());
-            rootObject.put("user_handle", metadata.userHandle);
-            rootObject.put("tar_type", metadata.tarType);
-            rootObject.put("key_store", metadata.keyStore);
-            rootObject.put("installer", metadata.installer);
+            rootObject.put("label", mMetadata.label);
+            rootObject.put("package_name", mMetadata.packageName);
+            rootObject.put("version_name", mMetadata.versionName);
+            rootObject.put("version_code", mMetadata.versionCode);
+            rootObject.put("data_dirs", JSONUtils.getJSONArray(mMetadata.dataDirs));
+            rootObject.put("is_system", mMetadata.isSystem);
+            rootObject.put("is_split_apk", mMetadata.isSplitApk);
+            rootObject.put("split_configs", JSONUtils.getJSONArray(mMetadata.splitConfigs));
+            rootObject.put("has_rules", mMetadata.hasRules);
+            rootObject.put("backup_time", mMetadata.backupTime);
+            rootObject.put("checksum_algo", mMetadata.checksumAlgo);
+            rootObject.put("crypto", mMetadata.crypto);
+            rootObject.put("key_ids", mMetadata.keyIds);
+            rootObject.put("iv", mMetadata.iv == null ? null : HexEncoding.encodeToString(mMetadata.iv));
+            rootObject.put("aes", mMetadata.aes == null ? null : HexEncoding.encodeToString(mMetadata.aes));
+            rootObject.put("version", mMetadata.version);
+            rootObject.put("apk_name", mMetadata.apkName);
+            rootObject.put("instruction_set", mMetadata.instructionSet);
+            rootObject.put("flags", mMetadata.flags.getFlags());
+            rootObject.put("user_handle", mMetadata.userHandle);
+            rootObject.put("tar_type", mMetadata.tarType);
+            rootObject.put("key_store", mMetadata.keyStore);
+            rootObject.put("installer", mMetadata.installer);
             outputStream.write(rootObject.toString(4).getBytes());
+        } catch (JSONException e) {
+            throw new IOException(e.getMessage() + " for path " + backupFile.getBackupPath());
         }
     }
 
     public Metadata setupMetadata(@NonNull PackageInfo packageInfo,
-                                  int userHandle,
+                                  @UserIdInt int userHandle,
                                   @NonNull BackupFlags requestedFlags) {
-        PackageManager pm = appManager.getPackageManager();
+        PackageManager pm = mContext.getPackageManager();
         ApplicationInfo applicationInfo = packageInfo.applicationInfo;
-        metadata = new Metadata();
+        mMetadata = new Metadata();
         // We don't need to backup custom users or multiple backup flags
         requestedFlags.removeFlag(BackupFlags.BACKUP_CUSTOM_USERS | BackupFlags.BACKUP_MULTIPLE);
-        metadata.flags = requestedFlags;
-        metadata.userHandle = userHandle;
-        metadata.tarType = (String) AppPref.get(AppPref.PrefKey.PREF_BACKUP_COMPRESSION_METHOD_STR);
-        metadata.crypto = CryptoUtils.getMode();
+        mMetadata.flags = requestedFlags;
+        mMetadata.userHandle = userHandle;
+        mMetadata.tarType = Prefs.BackupRestore.getCompressionMethod();
+        mMetadata.crypto = CryptoUtils.getMode();
         // Verify tar type
-        if (ArrayUtils.indexOf(TAR_TYPES, metadata.tarType) == -1) {
+        if (ArrayUtils.indexOf(TAR_TYPES, mMetadata.tarType) == -1) {
             // Unknown tar type, set default
-            metadata.tarType = TarUtils.TAR_GZIP;
+            mMetadata.tarType = TarUtils.TAR_GZIP;
         }
-        metadata.keyStore = KeyStoreUtils.hasKeyStore(applicationInfo.uid);
-        metadata.label = applicationInfo.loadLabel(pm).toString();
-        metadata.packageName = packageInfo.packageName;
-        metadata.versionName = packageInfo.versionName;
-        metadata.versionCode = PackageInfoCompat.getLongVersionCode(packageInfo);
-        metadata.apkName = new File(applicationInfo.sourceDir).getName();
-        // FIXME(10/7/20): External data directory is not respecting userHandle
-        metadata.dataDirs = PackageUtils.getDataDirs(applicationInfo, requestedFlags.backupInternalData(),
+        mMetadata.keyStore = KeyStoreUtils.hasKeyStore(applicationInfo.uid);
+        mMetadata.label = applicationInfo.loadLabel(pm).toString();
+        mMetadata.packageName = packageInfo.packageName;
+        mMetadata.versionName = packageInfo.versionName;
+        mMetadata.versionCode = PackageInfoCompat.getLongVersionCode(packageInfo);
+        mMetadata.apkName = new File(applicationInfo.sourceDir).getName();
+        mMetadata.dataDirs = BackupUtils.getDataDirectories(applicationInfo, requestedFlags.backupInternalData(),
                 requestedFlags.backupExternalData(), requestedFlags.backupMediaObb());
-        metadata.isSystem = (applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-        metadata.isSplitApk = false;
-        try {
-            ApkFile apkFile = ApkFile.getInstance(ApkFile.createInstance(applicationInfo));
+        mMetadata.isSystem = (applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+        mMetadata.isSplitApk = false;
+        try (ApkFile apkFile = ApkSource.getApkSource(applicationInfo).resolve()) {
             if (apkFile.isSplit()) {
                 List<ApkFile.Entry> apkEntries = apkFile.getEntries();
                 int splitCount = apkEntries.size() - 1;
-                metadata.isSplitApk = splitCount > 0;
-                metadata.splitConfigs = new String[splitCount];
+                mMetadata.isSplitApk = splitCount > 0;
+                mMetadata.splitConfigs = new String[splitCount];
                 for (int i = 0; i < splitCount; ++i) {
-                    metadata.splitConfigs[i] = apkEntries.get(i + 1).getFileName();
+                    mMetadata.splitConfigs[i] = apkEntries.get(i + 1).getFileName();
                 }
             }
         } catch (ApkFile.ApkFileException e) {
             e.printStackTrace();
         }
-        metadata.splitConfigs = ArrayUtils.defeatNullable(metadata.splitConfigs);
-        metadata.hasRules = false;
+        mMetadata.splitConfigs = ArrayUtils.defeatNullable(mMetadata.splitConfigs);
+        mMetadata.hasRules = false;
         if (requestedFlags.backupRules()) {
-            try (ComponentsBlocker cb = ComponentsBlocker.getInstance(packageInfo.packageName, userHandle)) {
-                metadata.hasRules = cb.entryCount() > 0;
+            try (ComponentsBlocker cb = ComponentsBlocker.getInstance(packageInfo.packageName, userHandle, false)) {
+                mMetadata.hasRules = cb.entryCount() > 0;
             }
         }
-        metadata.backupTime = 0;
-        try {
-            metadata.installer = PackageManagerCompat.getInstallerPackage(packageInfo.packageName);
-        } catch (Throwable e) {
-            e.printStackTrace();
+        mMetadata.backupTime = 0;
+        mMetadata.installer = ObjectsCompat.requireNonNullElse(PackageManagerCompat.getInstallerPackageName(
+                packageInfo.packageName, userHandle), BuildConfig.APPLICATION_ID);
+        return mMetadata;
+    }
+
+    public static String getReadableTarType(@TarUtils.TarType String tarType) {
+        int i = ArrayUtils.indexOf(TAR_TYPES, tarType);
+        if (i == -1) {
+            return "GZip";
         }
-        if (metadata.installer == null) {
-            metadata.installer = BuildConfig.APPLICATION_ID;
-        }
-        return metadata;
+        return TAR_TYPES_READABLE[i];
     }
 }

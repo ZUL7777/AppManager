@@ -12,13 +12,15 @@ import android.os.RemoteException;
 
 import androidx.annotation.RequiresApi;
 
+import misc.utils.HiddenUtil;
+
 public interface IUsageStatsManager extends IInterface {
     abstract class Stub extends Binder implements IUsageStatsManager {
         public Stub() {
         }
 
         public static IUsageStatsManager asInterface(IBinder obj) {
-            throw new UnsupportedOperationException();
+            return HiddenUtil.throwUOE(obj);
         }
 
         @Override
@@ -54,17 +56,17 @@ public interface IUsageStatsManager extends IInterface {
     void setAppInactive(String packageName, boolean inactive, int userId) throws RemoteException;
 
     /**
-     * @deprecated Removed in API 30 (Android R)
+     * @deprecated Replaced in API 30 (Android R) by {@link #isAppInactive(String, int, String)}
      */
     @RequiresApi(Build.VERSION_CODES.M)
     @Deprecated
-    boolean isAppInactive(String packageName, int userId);
+    boolean isAppInactive(String packageName, int userId) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.R)
     boolean isAppInactive(String packageName, int userId, String callingPackage) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.M)
-    void whitelistAppTemporarily(String packageName, long duration, int userId);
+    void whitelistAppTemporarily(String packageName, long duration, int userId) throws RemoteException;
 
     @RequiresApi(Build.VERSION_CODES.N)
     void onCarrierPrivilegedAppsChanged() throws RemoteException;
